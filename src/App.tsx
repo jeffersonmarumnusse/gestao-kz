@@ -285,7 +285,7 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       // Fetch Alunos
-      const { data: studentsData, error: studentsError } = await supabase.from('estudantes').select('*').order('name');
+      const { data: studentsData, error: studentsError } = await supabase.from('students').select('*').order('name');
       if (studentsData) {
         // Map snake_case from DB to camelCase for UI
         const mapped = studentsData.map((s: any) => ({
@@ -307,7 +307,7 @@ export default function App() {
       else if (studentsError) console.error('Erro ao buscar alunos:', studentsError);
 
       // Fetch Experimentais
-      const { data: expData, error: expError } = await supabase.from('estudantes_experimentais').select('*').order('name');
+      const { data: expData, error: expError } = await supabase.from('experimental_students').select('*').order('name');
       if (expData) {
         const mapped = expData.map((s: any) => ({
           id: s.id,
@@ -324,7 +324,7 @@ export default function App() {
       else if (expError) console.error('Erro ao buscar experimentais:', expError);
 
       // Fetch Transações
-      const { data: transData, error: transError } = await supabase.from('transacoes').select('*').order('date', { ascending: false });
+      const { data: transData, error: transError } = await supabase.from('transactions').select('*').order('date', { ascending: false });
       if (transData) {
         const mapped = transData.map((t: any) => ({
           id: t.id,
@@ -340,7 +340,7 @@ export default function App() {
       else if (transError) console.error('Erro ao buscar transações:', transError);
 
       // Fetch Agendamentos e agrupar para o formato do UI
-      const { data: agendaData, error: agendaError } = await supabase.from('agenda_reservas').select('*');
+      const { data: agendaData, error: agendaError } = await supabase.from('agenda_bookings').select('*');
       if (agendaData) {
         const groupedAgenda: Record<string, AgendaSlot> = {};
         agendaData.forEach(booking => {
@@ -454,7 +454,7 @@ export default function App() {
 
     const newStatus = transaction.status === 'completed' ? 'pending' : 'completed';
     
-    const { error } = await supabase.from('transacoes').update({ status: newStatus }).eq('id', id);
+    const { error } = await supabase.from('transactions').update({ status: newStatus }).eq('id', id);
     if (error) {
       console.error('Erro ao alternar status da transação:', error);
       return;
@@ -463,11 +463,11 @@ export default function App() {
     setTransactions(transactions.map((t: any) => {
       if (t.id === id) {
         // Se a transação for de um aluno, sincroniza o status do aluno também
-        if (t.student_id) {
+        if (t.studentId) {
           const studentStatus = newStatus === 'completed' ? 'Em dia' : 'Pendente';
-          supabase.from('estudantes').update({ status: studentStatus }).eq('id', t.student_id);
+          supabase.from('students').update({ status: studentStatus }).eq('id', t.studentId);
           setStudents(prevStudents => prevStudents.map(s => 
-            s.id === t.student_id ? { ...s, status: studentStatus } : s
+            s.id === t.studentId ? { ...s, status: studentStatus } : s
           ));
         }
         return { ...t, status: newStatus };
@@ -478,7 +478,7 @@ export default function App() {
 
   const handleDeleteTransaction = async (id: number) => {
     if (window.confirm('Excluir esta transação?')) {
-      const { error } = await supabase.from('transacoes').delete().eq('id', id);
+      const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) {
         console.error('Erro ao excluir transação:', error);
         return;
@@ -609,7 +609,7 @@ export default function App() {
     };
 
     if (editingStudent) {
-      const { error } = await supabase.from('estudantes').update(studentDataDB).eq('id', studentId);
+      const { error } = await supabase.from('students').update(studentDataDB).eq('id', studentId);
       if (error) {
         console.error('Erro ao atualizar aluno:', error);
         alert('Erro ao atualizar aluno no banco de dados. Verifique sua conexão.');
@@ -624,12 +624,12 @@ export default function App() {
         amount: amount,
         status: selectedPayment === 'Em dia' ? 'completed' : 'pending'
       };
-      await supabase.from('transacoes').update(transData).eq('student_id', studentId);
+      await supabase.from('transactions').update(transData).eq('student_id', studentId);
       setTransactions(prevTransactions => prevTransactions.map((t: any) => 
         t.studentId === studentId ? { ...t, ...transData } : t
       ));
     } else {
-      const { error } = await supabase.from('estudantes').insert([studentDataDB]);
+      const { error } = await supabase.from('students').insert([studentDataDB]);
       if (error) {
         console.error('Erro ao inserir aluno:', error);
         alert(`Erro ao salvar aluno: ${error.message || 'Erro desconhecido'}`);
@@ -649,7 +649,7 @@ export default function App() {
         date: new Date().toISOString().split('T')[0]
       };
       
-      const { error: transError } = await supabase.from('transacoes').insert([newTrans]);
+      const { error: transError } = await supabase.from('transactions').insert([newTrans]);
       if (transError) {
         console.error('Erro ao criar transação inicial:', transError);
       }
@@ -750,7 +750,7 @@ export default function App() {
     // Atualiza Transação Vinculada
     await supabase.from('transactions').update({ status: newTransStatus }).eq('student_id', student.id);
     setTransactions(transactions.map((t: any) => 
-      t.student_id === student.id ? { ...t, status: newTransStatus } : t
+      t.studentId === student.id ? { ...t, status: newTransStatus } : t
     ));
   };
 
