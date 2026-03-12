@@ -706,7 +706,7 @@ export default function App() {
     };
 
     if (editingExperimental) {
-      const { error } = await supabase.from('estudantes_experimentais').update(experimentalDataDB).eq('id', studentId);
+      const { error } = await supabase.from('experimental_students').update(experimentalDataDB).eq('id', studentId);
       if (error) {
         console.error('Erro ao atualizar experimental:', error);
         alert(`Erro ao atualizar experimental: ${error.message}`);
@@ -714,7 +714,7 @@ export default function App() {
       }
       setExperimentalStudents(prevStudents => prevStudents.map(s => s.id === studentId ? { ...s, ...experimentalDataUI } : s));
     } else {
-      const { error } = await supabase.from('estudantes_experimentais').insert([experimentalDataDB]);
+      const { error } = await supabase.from('experimental_students').insert([experimentalDataDB]);
       if (error) {
         console.error('Erro ao inserir experimental:', error);
         alert(`Erro ao salvar experimental: ${error.message}`);
