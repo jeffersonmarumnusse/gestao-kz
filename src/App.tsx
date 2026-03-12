@@ -553,8 +553,6 @@ export default function App() {
       phone: phone
     };
 
-    console.log('Dados do aluno para salvar:', studentData);
-
     if (editingStudent) {
       const { error } = await supabase.from('estudantes').update(studentData).eq('id', studentId);
       if (error) {
@@ -576,7 +574,6 @@ export default function App() {
         t.student_id === studentId ? { ...t, ...transData } : t
       ));
     } else {
-      console.log('Tentando inserir aluno:', studentData);
       const { error } = await supabase.from('estudantes').insert([studentData]);
       if (error) {
         console.error('Erro ao inserir aluno:', error);
