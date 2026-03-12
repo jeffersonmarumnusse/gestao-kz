@@ -415,14 +415,14 @@ export default function App() {
     };
 
     if (editingTransaction) {
-      const { error } = await supabase.from('transacoes').update(transData).eq('id', transactionId);
+      const { error } = await supabase.from('transactions').update(transData).eq('id', transactionId);
       if (error) {
         console.error('Erro ao atualizar transação:', error);
         return;
       }
       setTransactions(prevTransactions => prevTransactions.map((t: any) => t.id === transactionId ? { ...t, ...transData } : t));
     } else {
-      const { error } = await supabase.from('transacoes').insert([transData]);
+      const { error } = await supabase.from('transactions').insert([transData]);
       if (error) {
         console.error('Erro ao inserir transação:', error);
         return;
@@ -945,7 +945,7 @@ export default function App() {
           status: t.status,
           date: t.date
         }));
-        await supabase.from('transacoes').upsert(transToInsert);
+        await supabase.from('transactions').upsert(transToInsert);
       }
 
       // Migrate Agenda
