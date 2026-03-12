@@ -286,17 +286,57 @@ export default function App() {
     const fetchData = async () => {
       // Fetch Alunos
       const { data: studentsData, error: studentsError } = await supabase.from('estudantes').select('*').order('name');
-      if (studentsData) setStudents(studentsData);
+      if (studentsData) {
+        // Map snake_case from DB to camelCase for UI
+        const mapped = studentsData.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          plan: s.plan,
+          lastCheckin: s.last_checkin,
+          status: s.status,
+          value: s.value,
+          preferredTime: s.preferred_time,
+          preferredModality: s.preferred_modality,
+          enrollmentDate: s.enrollment_date,
+          preferredDueDay: s.preferred_due_day,
+          birthDate: s.birth_date,
+          phone: s.phone
+        }));
+        setStudents(mapped);
+      }
       else if (studentsError) console.error('Erro ao buscar alunos:', studentsError);
 
       // Fetch Experimentais
       const { data: expData, error: expError } = await supabase.from('estudantes_experimentais').select('*').order('name');
-      if (expData) setExperimentalStudents(expData);
+      if (expData) {
+        const mapped = expData.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          preferredTime: s.preferred_time,
+          preferredModality: s.preferred_modality,
+          enrollmentDate: s.enrollment_date,
+          birthDate: s.birth_date,
+          phone: s.phone,
+          status: s.status
+        }));
+        setExperimentalStudents(mapped);
+      }
       else if (expError) console.error('Erro ao buscar experimentais:', expError);
 
       // Fetch Transações
       const { data: transData, error: transError } = await supabase.from('transacoes').select('*').order('date', { ascending: false });
-      if (transData) setTransactions(transData);
+      if (transData) {
+        const mapped = transData.map((t: any) => ({
+          id: t.id,
+          studentId: t.student_id,
+          description: t.description,
+          amount: t.amount,
+          type: t.type,
+          status: t.status,
+          date: t.date
+        }));
+        setTransactions(mapped);
+      }
       else if (transError) console.error('Erro ao buscar transações:', transError);
 
       // Fetch Agendamentos e agrupar para o formato do UI
@@ -539,7 +579,7 @@ export default function App() {
     const studentId = editingStudent ? editingStudent.id : Date.now();
     const amount = parseFloat(newStudentValue) || 0;
     
-    const studentData = {
+    const studentDataDB = {
       id: studentId,
       name: newStudentName,
       plan: selectedPlan,
@@ -553,15 +593,30 @@ export default function App() {
       phone: phone
     };
 
+    const studentDataUI = {
+      id: studentId,
+      name: newStudentName,
+      plan: selectedPlan,
+      status: selectedPayment,
+      value: amount,
+      preferredTime: preferredTime,
+      preferredModality: preferredModality,
+      enrollmentDate: enrollmentDate,
+      preferredDueDay: preferredDueDay,
+      birthDate: birthDate,
+      phone: phone,
+      lastCheckin: editingStudent ? editingStudent.lastCheckin : 'Nunca'
+    };
+
     if (editingStudent) {
-      const { error } = await supabase.from('estudantes').update(studentData).eq('id', studentId);
+      const { error } = await supabase.from('estudantes').update(studentDataDB).eq('id', studentId);
       if (error) {
         console.error('Erro ao atualizar aluno:', error);
         alert('Erro ao atualizar aluno no banco de dados. Verifique sua conexão.');
         return;
       }
 
-      setStudents(prevStudents => prevStudents.map(s => s.id === studentId ? { ...s, ...studentData } : s));
+      setStudents(prevStudents => prevStudents.map(s => s.id === studentId ? { ...s, ...studentDataUI } : s));
 
       // Atualiza transação se existir
       const transData = {
@@ -571,17 +626,17 @@ export default function App() {
       };
       await supabase.from('transacoes').update(transData).eq('student_id', studentId);
       setTransactions(prevTransactions => prevTransactions.map((t: any) => 
-        t.student_id === studentId ? { ...t, ...transData } : t
+        t.studentId === studentId ? { ...t, ...transData } : t
       ));
     } else {
-      const { error } = await supabase.from('estudantes').insert([studentData]);
+      const { error } = await supabase.from('estudantes').insert([studentDataDB]);
       if (error) {
         console.error('Erro ao inserir aluno:', error);
         alert(`Erro ao salvar aluno: ${error.message || 'Erro desconhecido'}`);
         return;
       }
 
-      setStudents(prevStudents => [studentData, ...prevStudents]);
+      setStudents(prevStudents => [studentDataUI, ...prevStudents]);
 
       // Cria transação automática
       const newTrans = {
@@ -593,11 +648,22 @@ export default function App() {
         status: selectedPayment === 'Em dia' ? 'completed' : 'pending',
         date: new Date().toISOString().split('T')[0]
       };
+      
       const { error: transError } = await supabase.from('transacoes').insert([newTrans]);
       if (transError) {
         console.error('Erro ao criar transação inicial:', transError);
       }
-      setTransactions(prevTransactions => [newTrans, ...prevTransactions]);
+
+      const newTransUI = {
+        id: newTrans.id,
+        studentId: studentId,
+        description: newTrans.description,
+        amount: newTrans.amount,
+        type: newTrans.type,
+        status: newTrans.status,
+        date: newTrans.date
+      };
+      setTransactions(prevTransactions => [newTransUI, ...prevTransactions]);
     }
 
     setNewStudentName('');
@@ -617,7 +683,7 @@ export default function App() {
     
     const studentId = editingExperimental ? editingExperimental.id : Date.now();
     
-    const experimentalData = {
+    const experimentalDataDB = {
       id: studentId,
       name: newStudentName,
       preferred_time: preferredTime,
@@ -628,22 +694,33 @@ export default function App() {
       status: 'Experimental'
     };
 
+    const experimentalDataUI = {
+      id: studentId,
+      name: newStudentName,
+      preferredTime: preferredTime,
+      preferredModality: preferredModality,
+      enrollmentDate: enrollmentDate,
+      birthDate: birthDate,
+      phone: phone,
+      status: 'Experimental'
+    };
+
     if (editingExperimental) {
-      const { error } = await supabase.from('estudantes_experimentais').update(experimentalData).eq('id', studentId);
+      const { error } = await supabase.from('estudantes_experimentais').update(experimentalDataDB).eq('id', studentId);
       if (error) {
         console.error('Erro ao atualizar experimental:', error);
         alert(`Erro ao atualizar experimental: ${error.message}`);
         return;
       }
-      setExperimentalStudents(prevStudents => prevStudents.map(s => s.id === studentId ? { ...s, ...experimentalData } : s));
+      setExperimentalStudents(prevStudents => prevStudents.map(s => s.id === studentId ? { ...s, ...experimentalDataUI } : s));
     } else {
-      const { error } = await supabase.from('estudantes_experimentais').insert([experimentalData]);
+      const { error } = await supabase.from('estudantes_experimentais').insert([experimentalDataDB]);
       if (error) {
         console.error('Erro ao inserir experimental:', error);
         alert(`Erro ao salvar experimental: ${error.message}`);
         return;
       }
-      setExperimentalStudents(prevStudents => [experimentalData, ...prevStudents]);
+      setExperimentalStudents(prevStudents => [experimentalDataUI, ...prevStudents]);
     }
 
     setNewStudentName('');
@@ -1749,7 +1826,7 @@ export default function App() {
               <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Data Nascimento</label>
               <input 
                 type="date" 
-                value={birthDate}
+                value={birthDate || ''}
                 onChange={(e) => setBirthDate(e.target.value)}
                 className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white [color-scheme:dark]"
               />
@@ -1865,7 +1942,7 @@ export default function App() {
               <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Data Nascimento</label>
               <input 
                 type="date" 
-                value={birthDate}
+                value={birthDate || ''}
                 onChange={(e) => setBirthDate(e.target.value)}
                 className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white [color-scheme:dark]"
               />
