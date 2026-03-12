@@ -827,7 +827,7 @@ export default function App() {
       is_experimental: experimental
     };
 
-    const { error } = await supabase.from('agenda_reservas').insert([newBooking]);
+    const { error } = await supabase.from('agenda_bookings').insert([newBooking]);
     if (error) {
       console.error('Erro ao adicionar agendamento:', error);
       return;
@@ -864,7 +864,7 @@ export default function App() {
   const handleRemoveBooking = async (modality: string, bookingId: string) => {
     const slotKey = `${selectedAgendaDate}-${selectedTimeSlot}`;
     
-    const { error } = await supabase.from('agenda_reservas').delete().eq('id', bookingId);
+    const { error } = await supabase.from('agenda_bookings').delete().eq('id', bookingId);
     if (error) {
       console.error('Erro ao remover agendamento:', error);
       return;
@@ -964,7 +964,7 @@ export default function App() {
         });
       });
       if (bookingsToInsert.length > 0) {
-        await supabase.from('agenda_reservas').upsert(bookingsToInsert);
+        await supabase.from('agenda_bookings').upsert(bookingsToInsert);
       }
 
       alert('Migração concluída com sucesso! Recarregue a página.');
