@@ -285,22 +285,22 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       // Fetch Alunos
-      const { data: studentsData, error: studentsError } = await supabase.from('students').select('*').order('name');
+      const { data: studentsData, error: studentsError } = await supabase.from('estudantes').select('*').order('name');
       if (studentsData) setStudents(studentsData);
       else if (studentsError) console.error('Erro ao buscar alunos:', studentsError);
 
       // Fetch Experimentais
-      const { data: expData, error: expError } = await supabase.from('experimental_students').select('*').order('name');
+      const { data: expData, error: expError } = await supabase.from('estudantes_experimentais').select('*').order('name');
       if (expData) setExperimentalStudents(expData);
       else if (expError) console.error('Erro ao buscar experimentais:', expError);
 
       // Fetch Transações
-      const { data: transData, error: transError } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+      const { data: transData, error: transError } = await supabase.from('transacoes').select('*').order('date', { ascending: false });
       if (transData) setTransactions(transData);
       else if (transError) console.error('Erro ao buscar transações:', transError);
 
       // Fetch Agendamentos e agrupar para o formato do UI
-      const { data: agendaData, error: agendaError } = await supabase.from('agenda_bookings').select('*');
+      const { data: agendaData, error: agendaError } = await supabase.from('agenda_reservas').select('*');
       if (agendaData) {
         const groupedAgenda: Record<string, AgendaSlot> = {};
         agendaData.forEach(booking => {
@@ -375,14 +375,14 @@ export default function App() {
     };
 
     if (editingTransaction) {
-      const { error } = await supabase.from('transactions').update(transData).eq('id', transactionId);
+      const { error } = await supabase.from('transacoes').update(transData).eq('id', transactionId);
       if (error) {
         console.error('Erro ao atualizar transação:', error);
         return;
       }
       setTransactions(prevTransactions => prevTransactions.map((t: any) => t.id === transactionId ? { ...t, ...transData } : t));
     } else {
-      const { error } = await supabase.from('transactions').insert([transData]);
+      const { error } = await supabase.from('transacoes').insert([transData]);
       if (error) {
         console.error('Erro ao inserir transação:', error);
         return;
@@ -414,7 +414,7 @@ export default function App() {
 
     const newStatus = transaction.status === 'completed' ? 'pending' : 'completed';
     
-    const { error } = await supabase.from('transactions').update({ status: newStatus }).eq('id', id);
+    const { error } = await supabase.from('transacoes').update({ status: newStatus }).eq('id', id);
     if (error) {
       console.error('Erro ao alternar status da transação:', error);
       return;
@@ -425,7 +425,7 @@ export default function App() {
         // Se a transação for de um aluno, sincroniza o status do aluno também
         if (t.student_id) {
           const studentStatus = newStatus === 'completed' ? 'Em dia' : 'Pendente';
-          supabase.from('students').update({ status: studentStatus }).eq('id', t.student_id);
+          supabase.from('estudantes').update({ status: studentStatus }).eq('id', t.student_id);
           setStudents(prevStudents => prevStudents.map(s => 
             s.id === t.student_id ? { ...s, status: studentStatus } : s
           ));
@@ -438,7 +438,7 @@ export default function App() {
 
   const handleDeleteTransaction = async (id: number) => {
     if (window.confirm('Excluir esta transação?')) {
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      const { error } = await supabase.from('transacoes').delete().eq('id', id);
       if (error) {
         console.error('Erro ao excluir transação:', error);
         return;
@@ -549,14 +549,17 @@ export default function App() {
       preferred_modality: preferredModality,
       enrollment_date: enrollmentDate,
       preferred_due_day: preferredDueDay,
-      birth_date: birthDate,
+      birth_date: birthDate || null,
       phone: phone
     };
 
+    console.log('Dados do aluno para salvar:', studentData);
+
     if (editingStudent) {
-      const { error } = await supabase.from('students').update(studentData).eq('id', studentId);
+      const { error } = await supabase.from('estudantes').update(studentData).eq('id', studentId);
       if (error) {
         console.error('Erro ao atualizar aluno:', error);
+        alert('Erro ao atualizar aluno no banco de dados. Verifique sua conexão.');
         return;
       }
 
@@ -568,14 +571,16 @@ export default function App() {
         amount: amount,
         status: selectedPayment === 'Em dia' ? 'completed' : 'pending'
       };
-      await supabase.from('transactions').update(transData).eq('student_id', studentId);
+      await supabase.from('transacoes').update(transData).eq('student_id', studentId);
       setTransactions(prevTransactions => prevTransactions.map((t: any) => 
         t.student_id === studentId ? { ...t, ...transData } : t
       ));
     } else {
-      const { error } = await supabase.from('students').insert([studentData]);
+      console.log('Tentando inserir aluno:', studentData);
+      const { error } = await supabase.from('estudantes').insert([studentData]);
       if (error) {
         console.error('Erro ao inserir aluno:', error);
+        alert(`Erro ao salvar aluno: ${error.message || 'Erro desconhecido'}`);
         return;
       }
 
@@ -591,7 +596,10 @@ export default function App() {
         status: selectedPayment === 'Em dia' ? 'completed' : 'pending',
         date: new Date().toISOString().split('T')[0]
       };
-      await supabase.from('transactions').insert([newTrans]);
+      const { error: transError } = await supabase.from('transacoes').insert([newTrans]);
+      if (transError) {
+        console.error('Erro ao criar transação inicial:', transError);
+      }
       setTransactions(prevTransactions => [newTrans, ...prevTransactions]);
     }
 
@@ -618,22 +626,24 @@ export default function App() {
       preferred_time: preferredTime,
       preferred_modality: preferredModality,
       enrollment_date: enrollmentDate,
-      birth_date: birthDate,
+      birth_date: birthDate || null,
       phone: phone,
       status: 'Experimental'
     };
 
     if (editingExperimental) {
-      const { error } = await supabase.from('experimental_students').update(experimentalData).eq('id', studentId);
+      const { error } = await supabase.from('estudantes_experimentais').update(experimentalData).eq('id', studentId);
       if (error) {
         console.error('Erro ao atualizar experimental:', error);
+        alert(`Erro ao atualizar experimental: ${error.message}`);
         return;
       }
       setExperimentalStudents(prevStudents => prevStudents.map(s => s.id === studentId ? { ...s, ...experimentalData } : s));
     } else {
-      const { error } = await supabase.from('experimental_students').insert([experimentalData]);
+      const { error } = await supabase.from('estudantes_experimentais').insert([experimentalData]);
       if (error) {
         console.error('Erro ao inserir experimental:', error);
+        alert(`Erro ao salvar experimental: ${error.message}`);
         return;
       }
       setExperimentalStudents(prevStudents => [experimentalData, ...prevStudents]);
@@ -743,7 +753,7 @@ export default function App() {
       is_experimental: experimental
     };
 
-    const { error } = await supabase.from('agenda_bookings').insert([newBooking]);
+    const { error } = await supabase.from('agenda_reservas').insert([newBooking]);
     if (error) {
       console.error('Erro ao adicionar agendamento:', error);
       return;
@@ -780,7 +790,7 @@ export default function App() {
   const handleRemoveBooking = async (modality: string, bookingId: string) => {
     const slotKey = `${selectedAgendaDate}-${selectedTimeSlot}`;
     
-    const { error } = await supabase.from('agenda_bookings').delete().eq('id', bookingId);
+    const { error } = await supabase.from('agenda_reservas').delete().eq('id', bookingId);
     if (error) {
       console.error('Erro ao remover agendamento:', error);
       return;
@@ -829,10 +839,10 @@ export default function App() {
           preferred_modality: s.preferredModality,
           enrollment_date: s.enrollmentDate,
           preferred_due_day: s.preferredDueDay,
-          birth_date: s.birthDate,
+          birth_date: s.birthDate || null,
           phone: s.phone
         }));
-        await supabase.from('students').upsert(studentsToInsert);
+        await supabase.from('estudantes').upsert(studentsToInsert);
       }
 
       // Migrate Experimental
@@ -843,11 +853,11 @@ export default function App() {
           preferred_time: s.preferredTime,
           preferred_modality: s.preferredModality,
           enrollment_date: s.enrollmentDate,
-          birth_date: s.birthDate,
+          birth_date: s.birthDate || null,
           phone: s.phone,
           status: s.status
         }));
-        await supabase.from('experimental_students').upsert(expToInsert);
+        await supabase.from('estudantes_experimentais').upsert(expToInsert);
       }
 
       // Migrate Transactions
@@ -861,7 +871,7 @@ export default function App() {
           status: t.status,
           date: t.date
         }));
-        await supabase.from('transactions').upsert(transToInsert);
+        await supabase.from('transacoes').upsert(transToInsert);
       }
 
       // Migrate Agenda
@@ -880,7 +890,7 @@ export default function App() {
         });
       });
       if (bookingsToInsert.length > 0) {
-        await supabase.from('agenda_bookings').upsert(bookingsToInsert);
+        await supabase.from('agenda_reservas').upsert(bookingsToInsert);
       }
 
       alert('Migração concluída com sucesso! Recarregue a página.');
