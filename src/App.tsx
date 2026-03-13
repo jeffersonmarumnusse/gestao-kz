@@ -233,6 +233,7 @@ export default function App() {
 
   // Form State
   const [newStudentName, setNewStudentName] = useState('');
+  const [newStudentPhotoUrl, setNewStudentPhotoUrl] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('K1');
   const [selectedPayment, setSelectedPayment] = useState('Em dia');
   const [newStudentValue, setNewStudentValue] = useState('');
@@ -291,7 +292,8 @@ export default function App() {
           enrollmentDate: s.enrollment_date,
           preferredDueDay: s.preferred_due_day,
           birthDate: s.birth_date,
-          phone: s.phone
+          phone: s.phone,
+          photoUrl: s.photo_url
         }));
         setStudents(mapped);
       }
@@ -622,7 +624,8 @@ export default function App() {
       enrollment_date: enrollmentDate,
       preferred_due_day: preferredDueDay,
       birth_date: birthDate || null,
-      phone: phone
+      phone: phone,
+      photo_url: newStudentPhotoUrl || null
     };
 
     const studentDataUI = {
@@ -637,6 +640,7 @@ export default function App() {
       preferredDueDay: preferredDueDay,
       birthDate: birthDate,
       phone: phone,
+      photoUrl: newStudentPhotoUrl || '',
       lastCheckin: editingStudent ? editingStudent.lastCheckin : 'Nunca'
     };
 
@@ -706,6 +710,7 @@ export default function App() {
     setPreferredDueDay('10');
     setBirthDate('');
     setPhone('');
+    setNewStudentPhotoUrl('');
     setEditingStudent(null);
     setIsModalOpen(false);
   };
@@ -801,6 +806,7 @@ export default function App() {
   const handleEditStudent = (student: any) => {
     setEditingStudent(student);
     setNewStudentName(student.name);
+    setNewStudentPhotoUrl(student.photoUrl || '');
     setSelectedPlan(student.plan);
     setSelectedPayment(student.status);
     setNewStudentValue(student.value ? student.value.toString() : '');
@@ -1424,9 +1430,19 @@ export default function App() {
                 {filteredStudents.map((s) => (
                   <div key={s.id} className="bg-[#141414] p-5 rounded-2xl border border-white/[0.05] flex items-center justify-between group">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[#1A1A1A] rounded-full flex items-center justify-center text-neutral-600">
-                        <Users size={20} />
-                      </div>
+                      {s.photoUrl ? (
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 bg-[#1A1A1A] flex-shrink-0">
+                          <img 
+                            src={s.photoUrl} 
+                            alt={s.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 bg-[#1A1A1A] rounded-full flex items-center justify-center text-neutral-600 flex-shrink-0">
+                          <Users size={20} />
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm font-bold text-white mb-0.5">{s.name}</p>
                         <p className="text-[11px] text-neutral-500 font-medium mb-1">
@@ -1950,6 +1966,17 @@ export default function App() {
               value={newStudentName}
               onChange={(e) => setNewStudentName(e.target.value)}
               className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Foto (URL opcional)</label>
+            <input 
+              type="url" 
+              placeholder="https://... foto do aluno" 
+              value={newStudentPhotoUrl}
+              onChange={(e) => setNewStudentPhotoUrl(e.target.value)}
+              className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-3 px-4 text-xs font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
             />
           </div>
 
