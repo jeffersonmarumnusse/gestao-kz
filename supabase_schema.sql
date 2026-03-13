@@ -12,6 +12,7 @@ CREATE TABLE students (
   preferred_due_day TEXT,
   birth_date DATE,
   phone TEXT,
+  photo_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -25,6 +26,7 @@ CREATE TABLE experimental_students (
   birth_date DATE,
   phone TEXT,
   status TEXT DEFAULT 'Experimental',
+  photo_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
