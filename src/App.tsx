@@ -118,15 +118,6 @@ const INITIAL_STUDENTS = [
   { id: 2, name: 'Iara Neusa de Lima Figueiredo', plan: 'K1', lastCheckin: 'Nunca', status: 'Em dia', birthDate: '1985-05-20', enrollmentDate: '2024-01-15', preferredDueDay: '05', value: 120 },
 ];
 
-const FINANCE_CHART_DATA = [
-  { month: 'Jan', profit: 4000 },
-  { month: 'Fev', profit: 5200 },
-  { month: 'Mar', profit: 4800 },
-  { month: 'Abr', profit: 6100 },
-  { month: 'Mai', profit: 6800 },
-  { month: 'Jun', profit: 7200 },
-];
-
 const INITIAL_TRANSACTIONS = [
   { id: 1, description: 'Mensalidade Iara', amount: 150, type: 'in', status: 'pending', date: '2026-03-15' },
   { id: 2, description: 'Aluguel março', amount: 2075, type: 'out', status: 'completed', date: '2026-03-10' },
@@ -400,6 +391,47 @@ export default function App() {
     if (financeFilter === 'despesas') return t.type === 'out';
     return true;
   }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const financeChartData = useMemo(() => {
+    const monthLabel = (year: number, monthIndex0: number) =>
+      new Date(year, monthIndex0, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+
+    const parseDateSafe = (value: any) => {
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    // Group by YYYY-MM, summing receitas/despesas (independente do status)
+    const byMonth = new Map<string, { year: number; month0: number; receitas: number; despesas: number }>();
+
+    for (const t of transactions) {
+      const d = parseDateSafe(t?.date);
+      if (!d) continue;
+      const year = d.getFullYear();
+      const month0 = d.getMonth();
+      const key = `${year}-${String(month0 + 1).padStart(2, '0')}`;
+
+      const amount = Number(t?.amount) || 0;
+      const current = byMonth.get(key) ?? { year, month0, receitas: 0, despesas: 0 };
+
+      if (t?.type === 'in') current.receitas += amount;
+      else if (t?.type === 'out') current.despesas += amount;
+
+      byMonth.set(key, current);
+    }
+
+    const rows = Array.from(byMonth.values())
+      .sort((a, b) => (a.year - b.year) || (a.month0 - b.month0))
+      .map((m) => ({
+        month: monthLabel(m.year, m.month0),
+        receitas: Math.round((m.receitas + Number.EPSILON) * 100) / 100,
+        despesas: Math.round((m.despesas + Number.EPSILON) * 100) / 100,
+        lucro: Math.round(((m.receitas - m.despesas) + Number.EPSILON) * 100) / 100,
+      }));
+
+    // Keep last 6 months with data
+    return rows.slice(-6);
+  }, [transactions]);
 
   const handleAddTransaction = async () => {
     if (!newTransDesc || !newTransValue) return;
@@ -945,7 +977,7 @@ export default function App() {
           status: t.status,
           date: t.date
         }));
-        await supabase.from('transactions').upsert(transToInsert);
+        await supabase.from('transacoes').upsert(transToInsert);
       }
 
       // Migrate Agenda
@@ -1661,14 +1693,18 @@ export default function App() {
 
               {/* Evolution Chart */}
               <section className="bg-[#141414] p-6 rounded-[2rem] border border-white/[0.05] relative overflow-hidden">
-                <h2 className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-8">Evolução do Lucro</h2>
+                <h2 className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-8">Receitas vs Despesas</h2>
                 <div className="h-[180px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={FINANCE_CHART_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <AreaChart data={financeChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
-                        <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                        <linearGradient id="colorReceitas" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
                           <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorDespesas" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.22}/>
+                          <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#262626" />
@@ -1682,16 +1718,27 @@ export default function App() {
                       <YAxis hide />
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#1A1A1A', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px' }}
-                        itemStyle={{ color: '#10b981', fontSize: '11px', fontWeight: 'bold' }}
+                        itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
                       />
                       <Area 
                         type="monotone" 
-                        dataKey="profit" 
+                        dataKey="receitas" 
+                        name="Receitas"
                         stroke="#10b981" 
                         strokeWidth={3}
                         fillOpacity={1} 
-                        fill="url(#colorProfit)" 
-                        animationDuration={2000}
+                        fill="url(#colorReceitas)" 
+                        animationDuration={1200}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="despesas" 
+                        name="Despesas"
+                        stroke="#f43f5e" 
+                        strokeWidth={3}
+                        fillOpacity={1} 
+                        fill="url(#colorDespesas)" 
+                        animationDuration={1200}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
