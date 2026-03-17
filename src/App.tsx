@@ -33,7 +33,9 @@ import {
   User,
   Zap,
   Check,
-  Cake
+  Cake,
+  Upload,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -230,6 +232,57 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [editingExperimental, setEditingExperimental] = useState<any>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo e tamanho (2MB)
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Foto muito grande! O limite é 2MB.');
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const fileExt = file.name.split('.').pop();
+      // Usar o ID do aluno se estiver editando, senão um time aleatório
+      const studentId = editingStudent?.id || editingExperimental?.id || Date.now();
+      const fileName = `${studentId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = fileName; // No bucket
+
+      const { error: uploadError } = await supabase.storage
+        .from('student-photos')
+        .upload(filePath, file, { 
+          cacheControl: '3600',
+          upsert: true 
+        });
+
+      if (uploadError) {
+        // Se o erro for bucket não encontrado, avisar o usuário
+        if (uploadError.message.includes('bucket not found')) {
+          throw new Error('O bucket "student-photos" precisa ser criado no Supabase Storage.');
+        }
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('student-photos')
+        .getPublicUrl(filePath);
+
+      setNewStudentPhotoUrl(publicUrl);
+    } catch (error: any) {
+      console.error('Erro no upload:', error);
+      alert(`Erro no upload: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Form State
   const [newStudentName, setNewStudentName] = useState('');
@@ -310,7 +363,8 @@ export default function App() {
           enrollmentDate: s.enrollment_date,
           birthDate: s.birth_date,
           phone: s.phone,
-          status: s.status
+          status: s.status,
+          photoUrl: s.photo_url
         }));
         setExperimentalStudents(mapped);
       }
@@ -757,7 +811,8 @@ export default function App() {
       enrollment_date: enrollmentDate,
       birth_date: birthDate || null,
       phone: phone,
-      status: 'Experimental'
+      status: 'Experimental',
+      photo_url: newStudentPhotoUrl || null
     };
 
     const experimentalDataUI = {
@@ -768,7 +823,8 @@ export default function App() {
       enrollmentDate: enrollmentDate,
       birthDate: birthDate,
       phone: phone,
-      status: 'Experimental'
+      status: 'Experimental',
+      photoUrl: newStudentPhotoUrl || ''
     };
 
     if (editingExperimental) {
@@ -797,6 +853,7 @@ export default function App() {
     setPreferredDueDay('10');
     setBirthDate('');
     setPhone('');
+    setNewStudentPhotoUrl('');
     setEditingExperimental(null);
     setIsExperimentalModalOpen(false);
   };
@@ -857,6 +914,7 @@ export default function App() {
     setEnrollmentDate(student.enrollmentDate || new Date().toISOString().split('T')[0]);
     setBirthDate(student.birthDate || '');
     setPhone(student.phone || '');
+    setNewStudentPhotoUrl(student.photoUrl || '');
     setIsExperimentalModalOpen(true);
   };
 
@@ -1938,10 +1996,11 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      <Modal isOpen={isExperimentalModalOpen} onClose={() => { setIsExperimentalModalOpen(false); setEditingExperimental(null); setNewStudentName(''); }}>
+      <Modal isOpen={isExperimentalModalOpen} onClose={() => { setIsExperimentalModalOpen(false); setEditingExperimental(null); setNewStudentName(''); setNewStudentPhotoUrl(''); }}>
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xl font-black tracking-tighter">{editingExperimental ? 'Editar Experimental' : 'Novo Experimental'}</h2>
-          <button onClick={() => { setIsExperimentalModalOpen(false); setEditingExperimental(null); }} className="text-neutral-500 hover:text-white">
+          <button onClick={() => { setIsExperimentalModalOpen(false); setEditingExperimental(null); setNewStudentPhotoUrl(''); }} className="text-neutral-500 hover:text-white">
+
             <X size={20} />
           </button>
         </div>
@@ -1957,6 +2016,51 @@ export default function App() {
               onChange={(e) => setNewStudentName(e.target.value)}
               className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
             />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Foto do Aluno</label>
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 bg-[#0D0D0D] border border-white/[0.08] rounded-2xl flex items-center justify-center overflow-hidden flex-shrink-0">
+                {newStudentPhotoUrl ? (
+                  <img src={newStudentPhotoUrl} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <Users size={24} className="text-neutral-700" />
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="relative">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden" 
+                    id="experimental-photo-upload"
+                  />
+                  <label 
+                    htmlFor="experimental-photo-upload"
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 bg-[#1A1A1A] border border-white/[0.05] hover:border-white/10 rounded-xl py-3 px-4 text-[10px] font-black uppercase tracking-widest cursor-pointer transition-all",
+                      isUploading && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    {isUploading ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Upload size={14} />
+                    )}
+                    {isUploading ? 'Carregando...' : 'Escolher Foto'}
+                  </label>
+                </div>
+                <input 
+                  type="url" 
+                  placeholder="Ou cole o link da foto aquí..." 
+                  value={newStudentPhotoUrl}
+                  onChange={(e) => setNewStudentPhotoUrl(e.target.value)}
+                  className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-2 px-3 text-[9px] font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
+                />
+              </div>
+            </div>
           </div>
 
           <div>
@@ -2043,10 +2147,10 @@ export default function App() {
       </Modal>
 
       {/* Modal Aluno */}
-      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingStudent(null); setNewStudentName(''); }}>
+      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingStudent(null); setNewStudentName(''); setNewStudentPhotoUrl(''); }}>
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xl font-black tracking-tighter">{editingStudent ? 'Editar Aluno' : 'Novo Aluno'}</h2>
-          <button onClick={() => { setIsModalOpen(false); setEditingStudent(null); }} className="text-neutral-500 hover:text-white">
+          <button onClick={() => { setIsModalOpen(false); setEditingStudent(null); setNewStudentPhotoUrl(''); }} className="text-neutral-500 hover:text-white">
             <X size={20} />
           </button>
         </div>
@@ -2065,14 +2169,48 @@ export default function App() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Foto (URL opcional)</label>
-            <input 
-              type="url" 
-              placeholder="https://... foto do aluno" 
-              value={newStudentPhotoUrl}
-              onChange={(e) => setNewStudentPhotoUrl(e.target.value)}
-              className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-3 px-4 text-xs font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
-            />
+            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Foto do Aluno</label>
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 bg-[#0D0D0D] border border-white/[0.08] rounded-2xl flex items-center justify-center overflow-hidden flex-shrink-0">
+                {newStudentPhotoUrl ? (
+                  <img src={newStudentPhotoUrl} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <Users size={24} className="text-neutral-700" />
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="relative">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden" 
+                    id="student-photo-upload"
+                  />
+                  <label 
+                    htmlFor="student-photo-upload"
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 bg-[#1A1A1A] border border-white/[0.05] hover:border-white/10 rounded-xl py-3 px-4 text-[10px] font-black uppercase tracking-widest cursor-pointer transition-all",
+                      isUploading && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    {isUploading ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Upload size={14} />
+                    )}
+                    {isUploading ? 'Carregando...' : 'Escolher Foto'}
+                  </label>
+                </div>
+                <input 
+                  type="url" 
+                  placeholder="Ou cole o link da foto aquí..." 
+                  value={newStudentPhotoUrl}
+                  onChange={(e) => setNewStudentPhotoUrl(e.target.value)}
+                  className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-2 px-3 text-[9px] font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
+                />
+              </div>
+            </div>
           </div>
 
           <div>
