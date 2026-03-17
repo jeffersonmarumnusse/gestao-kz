@@ -593,6 +593,35 @@ export default function App() {
 
   const chartData = dashboardViewMode === 'frequencia' ? frequencyData : distributionData;
 
+  // New students per month (based on enrollmentDate)
+  const newStudentsChartData = useMemo(() => {
+    const monthLabel = (year: number, monthIndex0: number) =>
+      new Date(year, monthIndex0, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+
+    const byMonth = new Map<string, { year: number; month0: number; total: number }>();
+
+    // Build last 6 months skeleton so months with 0 still appear
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      byMonth.set(key, { year: d.getFullYear(), month0: d.getMonth(), total: 0 });
+    }
+
+    for (const s of students) {
+      if (!s.enrollmentDate) continue;
+      const d = new Date(s.enrollmentDate);
+      if (isNaN(d.getTime())) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const entry = byMonth.get(key);
+      if (entry) entry.total += 1;
+    }
+
+    return Array.from(byMonth.values())
+      .sort((a, b) => (a.year - b.year) || (a.month0 - b.month0))
+      .map(m => ({ name: monthLabel(m.year, m.month0), total: m.total }));
+  }, [students]);
+
   const birthdayStudents = useMemo(() => {
     const today = new Date();
     // Obtemos o mês e dia atual no formato "MM-DD" para comparação direta
@@ -1204,6 +1233,72 @@ export default function App() {
                   isCurrency 
                   type="info" 
                 />
+              </section>
+
+              {/* New Students Monthly Chart */}
+              <section className="bg-[#141414] p-6 rounded-[2rem] border border-white/[0.05] relative overflow-hidden">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-1">Crescimento</p>
+                    <h2 className="text-white font-black text-lg tracking-tight leading-none">
+                      Novos Alunos
+                      <span className="ml-2 text-emerald-500">
+                        {newStudentsChartData.at(-1)?.total ?? 0}
+                      </span>
+                      <span className="text-neutral-600 font-medium text-sm ml-1">este mês</span>
+                    </h2>
+                  </div>
+                  <div className="flex items-center gap-2 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
+                    <UserPlus size={12} className="text-emerald-500" />
+                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">
+                      {students.length} total
+                    </span>
+                  </div>
+                </div>
+                <div className="h-[180px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={newStudentsChartData} margin={{ top: 20, right: 0, left: -40, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="newStudentsGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#404040', fontWeight: 700 }}
+                        dy={10}
+                      />
+                      <YAxis hide allowDecimals={false} />
+                      <Tooltip
+                        cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }}
+                        contentStyle={{
+                          background: '#141414',
+                          border: '1px solid rgba(255,255,255,0.06)',
+                          borderRadius: '1rem',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: '#fff'
+                        }}
+                        formatter={(value: any) => [`${value} aluno${value !== 1 ? 's' : ''}`, 'Novos']}
+                        labelStyle={{ color: '#6b7280', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="total"
+                        stroke="#10b981"
+                        strokeWidth={2.5}
+                        fill="url(#newStudentsGrad)"
+                        dot={{ fill: '#10b981', r: 4, strokeWidth: 0 }}
+                        activeDot={{ fill: '#10b981', r: 6, strokeWidth: 2, stroke: '#0D0D0D' }}
+                        animationDuration={1500}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-32 h-16 bg-emerald-500/5 rounded-full blur-[40px] pointer-events-none" />
               </section>
 
               {/* Quick Actions (Ações) */}

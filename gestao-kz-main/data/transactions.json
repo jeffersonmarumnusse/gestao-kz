@@ -1,5 +1,0 @@
-[
-  { "id": 1, "description": "Mensalidade Iara", "amount": 69.9, "type": "in", "status": "completed", "date": "2026-03-11" },
-  { "id": 2, "description": "Aluguel março", "amount": 2075, "type": "out", "status": "completed", "date": "2026-03-11" },
-  { "id": 3, "description": "Mensalidade prevista", "amount": 150, "type": "in", "status": "pending", "date": "2026-03-15" }
-]
