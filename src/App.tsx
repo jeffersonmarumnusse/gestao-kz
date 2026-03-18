@@ -326,91 +326,97 @@ export default function App() {
   const [newTransDate, setNewTransDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
 
-  // Fetch from Supabase on mount
-  useEffect(() => {
-    const fetchData = async () => {
-      // Fetch Alunos
-      const { data: studentsData, error: studentsError } = await supabase.from('students').select('*').order('name');
-      if (studentsData) {
-        // Map snake_case from DB to camelCase for UI
-        const mapped = studentsData.map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          plan: s.plan,
-          lastCheckin: s.last_checkin,
-          status: s.status,
-          value: s.value,
-          preferredTime: s.preferred_time,
-          preferredModality: s.preferred_modality,
-          enrollmentDate: s.enrollment_date,
-          preferredDueDay: s.preferred_due_day,
-          birthDate: s.birth_date,
-          phone: s.phone,
-          photoUrl: s.photo_url
-        }));
-        setStudents(mapped);
-      }
-      else if (studentsError) console.error('Erro ao buscar alunos:', studentsError);
+  // Fetch from Supabase
+  const fetchData = async () => {
+    // Fetch Alunos
+    const { data: studentsData, error: studentsError } = await supabase.from('students').select('*').order('name');
+    if (studentsData) {
+      const mapped = studentsData.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        plan: s.plan,
+        lastCheckin: s.last_checkin,
+        status: s.status,
+        value: s.value,
+        preferredTime: s.preferred_time,
+        preferredModality: s.preferred_modality,
+        enrollmentDate: s.enrollment_date,
+        preferredDueDay: s.preferred_due_day,
+        birthDate: s.birth_date,
+        phone: s.phone,
+        photoUrl: s.photo_url
+      }));
+      setStudents(mapped);
+    } else if (studentsError) console.error('Erro ao buscar alunos:', studentsError);
 
-      // Fetch Experimentais
-      const { data: expData, error: expError } = await supabase.from('experimental_students').select('*').order('name');
-      if (expData) {
-        const mapped = expData.map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          preferredTime: s.preferred_time,
-          preferredModality: s.preferred_modality,
-          enrollmentDate: s.enrollment_date,
-          birthDate: s.birth_date,
-          phone: s.phone,
-          status: s.status,
-          photoUrl: s.photo_url
-        }));
-        setExperimentalStudents(mapped);
-      }
-      else if (expError) console.error('Erro ao buscar experimentais:', expError);
+    // Fetch Experimentais
+    const { data: expData, error: expError } = await supabase.from('experimental_students').select('*').order('name');
+    if (expData) {
+      const mapped = expData.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        preferredTime: s.preferred_time,
+        preferredModality: s.preferred_modality,
+        enrollmentDate: s.enrollment_date,
+        birthDate: s.birth_date,
+        phone: s.phone,
+        status: s.status,
+        photoUrl: s.photo_url
+      }));
+      setExperimentalStudents(mapped);
+    } else if (expError) console.error('Erro ao buscar experimentais:', expError);
 
-      // Fetch Transações
-      const { data: transData, error: transError } = await supabase.from('transactions').select('*').order('date', { ascending: false });
-      if (transData) {
-        const mapped = transData.map((t: any) => ({
-          id: t.id,
-          studentId: t.student_id,
-          description: t.description,
-          amount: t.amount,
-          type: t.type,
-          status: t.status,
-          date: t.date
-        }));
-        setTransactions(mapped);
-      }
-      else if (transError) console.error('Erro ao buscar transações:', transError);
+    // Fetch Transações
+    const { data: transData, error: transError } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+    if (transData) {
+      const mapped = transData.map((t: any) => ({
+        id: t.id,
+        studentId: t.student_id,
+        description: t.description,
+        amount: t.amount,
+        type: t.type,
+        status: t.status,
+        date: t.date
+      }));
+      setTransactions(mapped);
+    } else if (transError) console.error('Erro ao buscar transações:', transError);
 
-      // Fetch Agendamentos e agrupar para o formato do UI
-      const { data: agendaData, error: agendaError } = await supabase.from('agenda_bookings').select('*');
-      if (agendaData) {
-        const groupedAgenda: Record<string, AgendaSlot> = {};
-        agendaData.forEach(booking => {
-          const key = booking.slot_key;
-          if (!groupedAgenda[key]) groupedAgenda[key] = { modalities: [] };
-          
-          let modSlot = groupedAgenda[key].modalities.find(m => m.modality === booking.modality);
-          if (!modSlot) {
-            modSlot = { modality: booking.modality, bookings: [] };
-            groupedAgenda[key].modalities.push(modSlot);
-          }
-          
-          modSlot.bookings.push({
-            id: booking.id,
-            studentName: booking.student_name,
-            isExperimental: booking.is_experimental
-          });
+    // Fetch Agendamentos
+    const { data: agendaData, error: agendaError } = await supabase.from('agenda_bookings').select('*');
+    if (agendaData) {
+      const groupedAgenda: Record<string, AgendaSlot> = {};
+      agendaData.forEach(booking => {
+        const key = booking.slot_key;
+        if (!groupedAgenda[key]) groupedAgenda[key] = { modalities: [] };
+        let modSlot = groupedAgenda[key].modalities.find(m => m.modality === booking.modality);
+        if (!modSlot) {
+          modSlot = { modality: booking.modality, bookings: [] };
+          groupedAgenda[key].modalities.push(modSlot);
+        }
+        modSlot.bookings.push({
+          id: booking.id,
+          studentName: booking.student_name,
+          isExperimental: booking.is_experimental
         });
-        setAgendaEvents(groupedAgenda);
-      } else if (agendaError) console.error('Erro ao buscar agenda:', agendaError);
-    };
+      });
+      setAgendaEvents(groupedAgenda);
+    } else if (agendaError) console.error('Erro ao buscar agenda:', agendaError);
+  };
 
+  useEffect(() => {
     fetchData();
+
+    // Setup Realtime subscriptions
+    const channel = supabase.channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'experimental_students' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_bookings' }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Remove Persistence Effects (localStorage)
@@ -506,13 +512,15 @@ export default function App() {
       const { error } = await supabase.from('transactions').update(transData).eq('id', transactionId);
       if (error) {
         console.error('Erro ao atualizar transação:', error);
+        alert(`Erro ao atualizar transação: ${error.message || 'Erro desconhecido'}`);
         return;
       }
-      setTransactions(prevTransactions => prevTransactions.map((t: any) => t.id === transactionId ? { ...t, ...transData } : t));
+      setTransactions(prevTransactions => prevTransactions.map((t: any) => t.id == transactionId ? { ...t, ...transData } : t));
     } else {
       const { error } = await supabase.from('transactions').insert([transData]);
       if (error) {
         console.error('Erro ao inserir transação:', error);
+        alert(`Erro ao salvar transação: ${error.message || 'Erro desconhecido'}`);
         return;
       }
       setTransactions(prevTransactions => [transData, ...prevTransactions]);
@@ -537,7 +545,7 @@ export default function App() {
   };
 
   const handleToggleTransactionStatus = async (id: number) => {
-    const transaction = transactions.find(t => t.id === id);
+    const transaction = transactions.find(t => t.id == id);
     if (!transaction) return;
 
     const newStatus = transaction.status === 'completed' ? 'pending' : 'completed';
@@ -545,17 +553,18 @@ export default function App() {
     const { error } = await supabase.from('transactions').update({ status: newStatus }).eq('id', id);
     if (error) {
       console.error('Erro ao alternar status da transação:', error);
+      alert(`Erro ao atualizar status da transação: ${error.message}`);
       return;
     }
 
     setTransactions(transactions.map((t: any) => {
-      if (t.id === id) {
+      if (t.id == id) {
         // Se a transação for de um aluno, sincroniza o status do aluno também
         if (t.studentId) {
           const studentStatus = newStatus === 'completed' ? 'Em dia' : 'Pendente';
           supabase.from('students').update({ status: studentStatus }).eq('id', t.studentId);
           setStudents(prevStudents => prevStudents.map(s => 
-            s.id === t.studentId ? { ...s, status: studentStatus } : s
+            s.id == t.studentId ? { ...s, status: studentStatus } : s
           ));
         }
         return { ...t, status: newStatus };
@@ -569,9 +578,10 @@ export default function App() {
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) {
         console.error('Erro ao excluir transação:', error);
+        alert(`Erro ao excluir transação: ${error.message}`);
         return;
       }
-      setTransactions(transactions.filter((t: any) => t.id !== id));
+      setTransactions(transactions.filter((t: any) => t.id != id));
     }
   };
 
@@ -735,7 +745,7 @@ export default function App() {
         return;
       }
 
-      setStudents(prevStudents => prevStudents.map(s => s.id === studentId ? { ...s, ...studentDataUI } : s));
+      setStudents(prevStudents => prevStudents.map(s => s.id == studentId ? { ...s, ...studentDataUI } : s));
 
       // Atualiza transação se existir
       const transData = {
@@ -745,7 +755,7 @@ export default function App() {
       };
       await supabase.from('transactions').update(transData).eq('student_id', studentId);
       setTransactions(prevTransactions => prevTransactions.map((t: any) => 
-        t.studentId === studentId ? { ...t, ...transData } : t
+        t.studentId == studentId ? { ...t, ...transData } : t
       ));
     } else {
       const { error } = await supabase.from('students').insert([studentDataDB]);
@@ -866,14 +876,19 @@ export default function App() {
     const { error: studentError } = await supabase.from('students').update({ status: newStatus }).eq('id', student.id);
     if (studentError) {
       console.error('Erro ao alternar status do aluno:', studentError);
+      alert(`Erro ao atualizar status do aluno: ${studentError.message}`);
       return;
     }
-    setStudents(students.map(s => s.id === student.id ? { ...s, status: newStatus } : s));
+    setStudents(students.map(s => s.id == student.id ? { ...s, status: newStatus } : s));
     
     // Atualiza Transação Vinculada
-    await supabase.from('transactions').update({ status: newTransStatus }).eq('student_id', student.id);
+    const { error: transError } = await supabase.from('transactions').update({ status: newTransStatus }).eq('student_id', student.id);
+    if (transError) {
+      console.error('Erro ao atualizar transação vinculada:', transError);
+    }
+    
     setTransactions(transactions.map((t: any) => 
-      t.studentId === student.id ? { ...t, status: newTransStatus } : t
+      t.studentId == student.id ? { ...t, status: newTransStatus } : t
     ));
   };
 
@@ -1016,105 +1031,6 @@ export default function App() {
     });
   };
 
-  const handleMigrateToSupabase = async () => {
-    if (!window.confirm('Deseja migrar todos os dados locais (do navegador) para o Supabase? Isso pode duplicar dados se já houver registros lá.')) return;
-
-    try {
-      const localStudents = JSON.parse(localStorage.getItem('gestao-kz-students') || '[]');
-      const localExp = JSON.parse(localStorage.getItem('gestao-kz-experimental') || '[]');
-      const localTrans = JSON.parse(localStorage.getItem('gestao-kz-transactions') || '[]');
-      const localAgenda = JSON.parse(localStorage.getItem('gestao-kz-agenda') || '{}');
-
-      // Migrate Students
-      if (localStudents.length > 0) {
-        const studentsToInsert = localStudents.map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          plan: s.plan,
-          last_checkin: s.lastCheckin,
-          status: s.status,
-          value: s.value,
-          preferred_time: s.preferredTime,
-          preferred_modality: s.preferredModality,
-          enrollment_date: s.enrollmentDate,
-          preferred_due_day: s.preferredDueDay,
-          birth_date: s.birthDate || null,
-          phone: s.phone
-        }));
-        await supabase.from('estudantes').upsert(studentsToInsert);
-      }
-
-      // Migrate Experimental
-      if (localExp.length > 0) {
-        const expToInsert = localExp.map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          preferred_time: s.preferredTime,
-          preferred_modality: s.preferredModality,
-          enrollment_date: s.enrollmentDate,
-          birth_date: s.birthDate || null,
-          phone: s.phone,
-          status: s.status
-        }));
-        await supabase.from('estudantes_experimentais').upsert(expToInsert);
-      }
-
-      // Migrate Transactions
-      if (localTrans.length > 0) {
-        const transToInsert = localTrans.map((t: any) => ({
-          id: t.id,
-          student_id: t.studentId || t.student_id,
-          description: t.description,
-          amount: t.amount,
-          type: t.type,
-          status: t.status,
-          date: t.date
-        }));
-        await supabase.from('transacoes').upsert(transToInsert);
-      }
-
-      // Migrate Agenda
-      const bookingsToInsert: any[] = [];
-      Object.entries(localAgenda).forEach(([slotKey, slot]: [string, any]) => {
-        slot.modalities.forEach((m: any) => {
-          m.bookings.forEach((b: any) => {
-            bookingsToInsert.push({
-              id: b.id,
-              slot_key: slotKey,
-              modality: m.modality,
-              student_name: b.studentName,
-              is_experimental: b.isExperimental
-            });
-          });
-        });
-      });
-      if (bookingsToInsert.length > 0) {
-        await supabase.from('agenda_bookings').upsert(bookingsToInsert);
-      }
-
-      alert('Migração concluída com sucesso! Recarregue a página.');
-      window.location.reload();
-    } catch (error) {
-      console.error('Erro na migração:', error);
-      alert('Ocorreu um erro na migração. Verifique o console.');
-    }
-  };
-
-  const handleExportData = () => {
-    const data = {
-      students: JSON.parse(localStorage.getItem('gestao-kz-students') || '[]'),
-      experimental: JSON.parse(localStorage.getItem('gestao-kz-experimental') || '[]'),
-      agenda: JSON.parse(localStorage.getItem('gestao-kz-agenda') || '{}'),
-      transactions: JSON.parse(localStorage.getItem('gestao-kz-transactions') || '[]'),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `backup-gestao-kz-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-  };
-
   const handleOpenCheckin = () => {
     const now = new Date();
     const hour = now.getHours().toString().padStart(2, '0') + ':00';
@@ -1217,7 +1133,7 @@ export default function App() {
                         dataKey="name" 
                         axisLine={false} 
                         tickLine={false} 
-                        tick={dashboardViewMode === 'distribuicao' || dashboardPlanFilter === 'Todos' ? { fontSize: 10, fill: '#404040', fontWeight: 700, textTransform: 'uppercase' } : false} 
+                        tick={dashboardViewMode === 'distribuicao' || dashboardPlanFilter === 'Todos' ? { fontSize: 10, fill: '#404040', fontWeight: 700, style: { textTransform: 'uppercase' } } : false} 
                         dy={15}
                       />
                       <YAxis hide />
@@ -1407,7 +1323,6 @@ export default function App() {
                   <ActionButton label="Nova Experimental" primary onClick={() => { setEditingExperimental(null); setNewStudentName(''); setView('experimentais'); setIsExperimentalModalOpen(true); }} />
                   <ActionButton label="Check-in" onClick={handleOpenCheckin} />
                   <ActionButton label="Lançamento" onClick={() => { setView('financeiro'); setIsFinanceModalOpen(true); setNewTransType('in'); }} />
-                  <ActionButton label="Migrar Dados p/ Nuvem" onClick={handleMigrateToSupabase} />
                 </div>
               </section>
             </motion.div>
@@ -2593,7 +2508,7 @@ export default function App() {
                 onClick={() => setNewTransType('in')}
                 className={cn(
                   "py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
-                  newTransType === 'in' ? "bg-[#1A1A1A] text-neutral-400 border border-white/[0.05]" : "text-neutral-600"
+                  newTransType === 'in' ? "bg-emerald-500 text-[#0D0D0D] shadow-[0_0_20px_rgba(16,185,129,0.3)]" : "text-neutral-600"
                 )}
               >
                 Receita
