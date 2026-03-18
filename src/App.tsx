@@ -367,7 +367,7 @@ export default function App() {
     } else if (expError) console.error('Erro ao buscar experimentais:', expError);
 
     // Fetch Transações
-    const { data: transData, error: transError } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+    const { data: transData, error: transError } = await supabase.from('transactions').select('*').order('date', { ascending: false }).order('id', { ascending: false });
     if (transData) {
       const mapped = transData.map((t: any) => ({
         id: t.id,
@@ -452,7 +452,11 @@ export default function App() {
     if (financeFilter === 'receitas') return t.type === 'in';
     if (financeFilter === 'despesas') return t.type === 'out';
     return true;
-  }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }).sort((a: any, b: any) => {
+    const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (dateDiff !== 0) return dateDiff;
+    return Number(b.id) - Number(a.id);
+  });
 
   const financeChartData = useMemo(() => {
     const monthLabel = (year: number, monthIndex0: number) =>
