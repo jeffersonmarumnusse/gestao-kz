@@ -1483,8 +1483,19 @@ export default function App() {
                 {filteredExperimental.map((s) => (
                   <div key={s.id} className="bg-[#141414] p-5 rounded-2xl border border-white/[0.05] flex items-center justify-between group">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-amber-500/10 rounded-full flex items-center justify-center text-amber-500">
-                        <Zap size={20} />
+                      <div className="relative w-12 h-12 flex-shrink-0">
+                        <div className="w-full h-full bg-amber-500/10 rounded-full flex items-center justify-center text-amber-500">
+                          <Zap size={20} />
+                        </div>
+                        {/* Attendance Counter Badge for experimental */}
+                        {(() => {
+                          const count = normalizedAttendanceMap[s.name.toLowerCase().trim()] || 0;
+                          return count > 0 && (
+                            <div className="absolute -top-1 -right-1 bg-emerald-500 text-[#0D0D0D] text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#141414] shadow-lg z-10">
+                              {count}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div>
                         <p className="text-sm font-bold text-white mb-0.5">{s.name}</p>
@@ -1619,17 +1630,19 @@ export default function App() {
                   <div key={s.id} className="bg-[#141414] p-5 rounded-2xl border border-white/[0.05] flex items-center justify-between group">
                     <div className="flex items-center gap-4">
                       {s.photoUrl ? (
-                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 bg-[#1A1A1A] flex-shrink-0">
-                          <img 
-                            src={s.photoUrl} 
-                            alt={s.name} 
-                            className="w-full h-full object-cover"
-                          />
+                        <div className="relative w-12 h-12 flex-shrink-0">
+                          <div className="w-full h-full rounded-full overflow-hidden border border-white/10 bg-[#1A1A1A]">
+                            <img 
+                              src={s.photoUrl} 
+                              alt={s.name} 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
                           {/* Attendance Counter Badge for photo */}
                           {(() => {
                             const count = normalizedAttendanceMap[s.name.toLowerCase().trim()] || 0;
                             return count > 0 && (
-                              <div className="absolute top-0 right-0 bg-emerald-500 text-[#0D0D0D] text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#141414] shadow-lg z-10">
+                              <div className="absolute -top-1 -right-1 bg-emerald-500 text-[#0D0D0D] text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#141414] shadow-lg z-10">
                                 {count}
                               </div>
                             );
