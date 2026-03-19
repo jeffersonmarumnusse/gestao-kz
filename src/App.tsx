@@ -686,10 +686,16 @@ export default function App() {
 
   const attendanceRankingData = useMemo(() => {
     return Object.entries(studentAttendanceMap)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10); // Top 10
-  }, [studentAttendanceMap]);
+      .map(([name, value]) => {
+        const student = students.find(s => s.name.toLowerCase().trim() === name.toLowerCase().trim());
+        return { 
+          name, 
+          value, 
+          plan: student?.plan || 'N/A' 
+        };
+      })
+      .sort((a, b) => b.value - a.value);
+  }, [studentAttendanceMap, students]);
 
   const chartData = useMemo(() => {
     if (dashboardViewMode === 'frequencia') return frequencyData;
@@ -1145,6 +1151,18 @@ export default function App() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 py-2 max-w-[280px] sm:max-w-md">
+                      {dashboardViewMode === 'ranking' && (
+                        <div className="flex items-center gap-4 mb-2">
+                           <div className="flex items-center gap-1.5">
+                             <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                             <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest">Normal</span>
+                           </div>
+                           <div className="flex items-center gap-1.5">
+                             <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+                             <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest">Wellhub/Gympass</span>
+                           </div>
+                        </div>
+                      )}
                       {dashboardViewMode === 'frequencia' ? (
                         ['Todos', ...PLAN_OPTIONS].map((plan) => (
                           <button
@@ -1173,67 +1191,115 @@ export default function App() {
                     <MoreHorizontal size={20} />
                   </button>
                 </div>
-                <div className="h-[220px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={chartData} 
-                      margin={{ top: 20, right: 0, left: -40, bottom: 0 }}
-                    >
-                      <XAxis 
-                        dataKey="name" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={dashboardViewMode !== 'frequencia' || dashboardPlanFilter === 'Todos' ? { fontSize: 8, fill: '#404040', fontWeight: 700, style: { textTransform: 'uppercase' } } : false} 
-                        dy={15}
-                        interval={0}
-                        angle={dashboardViewMode === 'ranking' ? -45 : 0}
-                        textAnchor={dashboardViewMode === 'ranking' ? 'end' : 'middle'}
-                        height={60}
-                      />
-                      <YAxis hide />
-                      <Tooltip
-                        cursor={{ fill: 'transparent' }}
-                        contentStyle={{ display: 'none' }}
-                      />
-                      <Bar 
-                        dataKey="value" 
-                        radius={[8, 8, 8, 8]} 
-                        barSize={dashboardViewMode === 'ranking' ? 30 : (dashboardViewMode === 'frequencia' ? 60 : 40)}
-                        animationDuration={1500}
+                
+                <div className="relative group">
+                  {dashboardViewMode === 'ranking' && chartData.length > 5 && (
+                    <>
+                      <button 
+                        onClick={() => {
+                          const container = document.getElementById('chart-scroll-container');
+                          if (container) container.scrollBy({ left: -200, behavior: 'smooth' });
+                        }}
+                        className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-[#1A1A1A] border border-white/10 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"
                       >
-                        <LabelList 
-                          dataKey="value" 
-                          position="top" 
-                          content={(props: any) => {
-                            const { x, y, width, value } = props;
-                            if (value === 0) return null;
-                            return (
-                              <text 
-                                x={x + width / 2} 
-                                y={y - 10} 
-                                fill="#404040" 
-                                fontSize={10} 
-                                fontWeight={900} 
-                                textAnchor="middle"
-                              >
-                                {value}
-                              </text>
-                            );
-                          }}
-                        />
-                        {chartData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={index === (dashboardViewMode === 'frequencia' ? 3 : (dashboardViewMode === 'ranking' ? 0 : 0)) ? '#10b981' : '#262626'} 
-                            className={cn(
-                              "transition-all duration-500",
-                              index === (dashboardViewMode === 'frequencia' ? 3 : (dashboardViewMode === 'ranking' ? 0 : 0)) && "shadow-[0_0_30px_rgba(16,185,129,0.4)]"
-                            )}
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const container = document.getElementById('chart-scroll-container');
+                          if (container) container.scrollBy({ left: 200, behavior: 'smooth' });
+                        }}
+                        className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-[#1A1A1A] border border-white/10 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </>
+                  )}
+                  
+                  <div 
+                    id="chart-scroll-container"
+                    className={cn(
+                      "h-[260px] w-full",
+                      dashboardViewMode === 'ranking' ? "overflow-x-auto overflow-y-hidden no-scrollbar" : "overflow-hidden"
+                    )}
+                  >
+                    <div style={{ 
+                      width: dashboardViewMode === 'ranking' ? `${Math.max(100, chartData.length * 80)}px` : '100%',
+                      height: '100%' 
+                    }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart 
+                          data={chartData} 
+                          margin={{ top: 20, right: 30, left: -40, bottom: 40 }}
+                        >
+                          <XAxis 
+                            dataKey="name" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={dashboardViewMode !== 'frequencia' || dashboardPlanFilter === 'Todos' ? { fontSize: 9, fill: '#666', fontWeight: 900, style: { textTransform: 'uppercase' } } : false} 
+                            dy={15}
+                            interval={0}
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
                           />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                          <YAxis hide />
+                          <Tooltip
+                            cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                            contentStyle={{ 
+                              background: '#141414', 
+                              border: '1px solid rgba(255,255,255,0.08)',
+                              borderRadius: '1.5rem',
+                              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+                            }}
+                            itemStyle={{ color: '#fff', fontSize: 12, fontWeight: 900 }}
+                            labelStyle={{ color: '#666', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', marginBottom: 4 }}
+                          />
+                          <Bar 
+                            dataKey="value" 
+                            radius={[8, 8, 8, 8]} 
+                            barSize={32}
+                            animationDuration={1500}
+                          >
+                            <LabelList 
+                              dataKey="value" 
+                              position="top" 
+                              content={(props: any) => {
+                                const { x, y, width, value } = props;
+                                if (value === 0) return null;
+                                return (
+                                  <text 
+                                    x={x + width / 2} 
+                                    y={y - 12} 
+                                    fill={chartData[props.index]?.plan === 'Wellhub' ? '#fb7185' : '#10b981'} 
+                                    fontSize={11} 
+                                    fontWeight={900} 
+                                    textAnchor="middle"
+                                  >
+                                    {value}
+                                  </text>
+                                );
+                              }}
+                            />
+                            {chartData.map((entry: any, index: number) => {
+                              const isWellhub = entry.plan === 'Wellhub';
+                              return (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={isWellhub ? '#e11d48' : (index === 0 && dashboardViewMode === 'ranking' ? '#10b981' : '#262626')} 
+                                  className={cn(
+                                    "transition-all duration-500",
+                                    isWellhub && "shadow-[0_0_20px_rgba(225,29,72,0.3)]",
+                                    index === 0 && dashboardViewMode === 'ranking' && "shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                                  )}
+                                />
+                              );
+                            })}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
                 <div className="absolute bottom-12 left-[calc(50%+10px)] -translate-x-1/2 w-20 h-20 bg-emerald-500/10 rounded-full blur-[40px] pointer-events-none" />
               </section>
