@@ -226,7 +226,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExperimentalModalOpen, setIsExperimentalModalOpen] = useState(false);
   const [dashboardPlanFilter, setDashboardPlanFilter] = useState('Todos');
-  const [dashboardViewMode, setDashboardViewMode] = useState<'distribuicao' | 'frequencia'>('distribuicao');
+  const [dashboardViewMode, setDashboardViewMode] = useState<'distribuicao' | 'frequencia' | 'ranking'>('distribuicao');
   const [students, setStudents] = useState<any[]>([]);
   const [experimentalStudents, setExperimentalStudents] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -659,7 +659,43 @@ export default function App() {
       });
   }, [students]);
 
-  const chartData = dashboardViewMode === 'frequencia' ? frequencyData : distributionData;
+  // Attendance Ranking Data (Top students by total bookings)
+  const studentAttendanceMap = useMemo(() => {
+    const counts: Record<string, number> = {};
+    Object.values(agendaEvents).forEach(slot => {
+      slot.modalities.forEach(modalitySlot => {
+        modalitySlot.bookings.forEach(booking => {
+          const name = booking.studentName?.trim() || '';
+          if (name) {
+            counts[name] = (counts[name] || 0) + 1;
+          }
+        });
+      });
+    });
+    return counts;
+  }, [agendaEvents]);
+
+  // Normalized map for the student list check (handle case-insensitive matches)
+  const normalizedAttendanceMap = useMemo(() => {
+    const counts: Record<string, number> = {};
+    Object.entries(studentAttendanceMap).forEach(([name, count]) => {
+      counts[name.toLowerCase()] = count;
+    });
+    return counts;
+  }, [studentAttendanceMap]);
+
+  const attendanceRankingData = useMemo(() => {
+    return Object.entries(studentAttendanceMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10); // Top 10
+  }, [studentAttendanceMap]);
+
+  const chartData = useMemo(() => {
+    if (dashboardViewMode === 'frequencia') return frequencyData;
+    if (dashboardViewMode === 'ranking') return attendanceRankingData;
+    return distributionData;
+  }, [dashboardViewMode, frequencyData, attendanceRankingData, distributionData]);
 
   // New students per month (based on enrollmentDate)
   const newStudentsChartData = useMemo(() => {
@@ -1096,6 +1132,16 @@ export default function App() {
                       >
                         Frequência Semanal
                       </button>
+                      <span className="text-neutral-800 text-[10px]">/</span>
+                      <button
+                        onClick={() => setDashboardViewMode('ranking')}
+                        className={cn(
+                          "text-[11px] font-bold uppercase tracking-[0.2em] transition-all",
+                          dashboardViewMode === 'ranking' ? "text-emerald-500" : "text-neutral-500 hover:text-neutral-400"
+                        )}
+                      >
+                        Ranking Aulas
+                      </button>
                     </div>
 
                     <div className="flex flex-wrap gap-2 py-2 max-w-[280px] sm:max-w-md">
@@ -1137,8 +1183,12 @@ export default function App() {
                         dataKey="name" 
                         axisLine={false} 
                         tickLine={false} 
-                        tick={dashboardViewMode === 'distribuicao' || dashboardPlanFilter === 'Todos' ? { fontSize: 10, fill: '#404040', fontWeight: 700, style: { textTransform: 'uppercase' } } : false} 
+                        tick={dashboardViewMode !== 'frequencia' || dashboardPlanFilter === 'Todos' ? { fontSize: 8, fill: '#404040', fontWeight: 700, style: { textTransform: 'uppercase' } } : false} 
                         dy={15}
+                        interval={0}
+                        angle={dashboardViewMode === 'ranking' ? -45 : 0}
+                        textAnchor={dashboardViewMode === 'ranking' ? 'end' : 'middle'}
+                        height={60}
                       />
                       <YAxis hide />
                       <Tooltip
@@ -1148,7 +1198,7 @@ export default function App() {
                       <Bar 
                         dataKey="value" 
                         radius={[8, 8, 8, 8]} 
-                        barSize={dashboardViewMode === 'frequencia' ? 60 : 40}
+                        barSize={dashboardViewMode === 'ranking' ? 30 : (dashboardViewMode === 'frequencia' ? 60 : 40)}
                         animationDuration={1500}
                       >
                         <LabelList 
@@ -1174,10 +1224,10 @@ export default function App() {
                         {chartData.map((entry, index) => (
                           <Cell 
                             key={`cell-${index}`} 
-                            fill={index === (dashboardViewMode === 'frequencia' ? 3 : 0) ? '#10b981' : '#262626'} 
+                            fill={index === (dashboardViewMode === 'frequencia' ? 3 : (dashboardViewMode === 'ranking' ? 0 : 0)) ? '#10b981' : '#262626'} 
                             className={cn(
                               "transition-all duration-500",
-                              index === (dashboardViewMode === 'frequencia' ? 3 : 0) && "shadow-[0_0_30px_rgba(16,185,129,0.4)]"
+                              index === (dashboardViewMode === 'frequencia' ? 3 : (dashboardViewMode === 'ranking' ? 0 : 0)) && "shadow-[0_0_30px_rgba(16,185,129,0.4)]"
                             )}
                           />
                         ))}
@@ -1509,10 +1559,28 @@ export default function App() {
                             alt={s.name} 
                             className="w-full h-full object-cover"
                           />
+                          {/* Attendance Counter Badge for photo */}
+                          {(() => {
+                            const count = normalizedAttendanceMap[s.name.toLowerCase().trim()] || 0;
+                            return count > 0 && (
+                              <div className="absolute top-0 right-0 bg-emerald-500 text-[#0D0D0D] text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#141414] shadow-lg z-10">
+                                {count}
+                              </div>
+                            );
+                          })()}
                         </div>
                       ) : (
-                        <div className="w-12 h-12 bg-[#1A1A1A] rounded-full flex items-center justify-center text-neutral-600 flex-shrink-0">
+                        <div className="w-12 h-12 bg-[#1A1A1A] rounded-full flex items-center justify-center text-neutral-600 flex-shrink-0 relative">
                           <Users size={20} />
+                          {/* Attendance Counter Badge */}
+                          {(() => {
+                            const count = normalizedAttendanceMap[s.name.toLowerCase().trim()] || 0;
+                            return count > 0 && (
+                              <div className="absolute -top-1 -right-1 bg-emerald-500 text-[#0D0D0D] text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#141414] shadow-lg">
+                                {count}
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
                       <div>
