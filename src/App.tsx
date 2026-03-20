@@ -1178,23 +1178,25 @@ export default function App() {
       {/* Main Content Area */}
       <div className="lg:pl-24 relative z-10 w-full">
         {/* Top Header */}
-        <header className="px-8 py-10 flex items-center justify-between border-b border-white/[0.03] backdrop-blur-md sticky top-0 z-[40]">
-          <div className="flex items-center gap-4">
-            <div className="lg:hidden w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.3)]">
-              <Dumbbell size={20} className="text-black" strokeWidth={2.5} />
+        <header className="border-b border-white/[0.03] backdrop-blur-md sticky top-0 z-[40]">
+          <div className="px-4 lg:px-12 py-8 flex items-center justify-between max-w-7xl mx-auto w-full">
+            <div className="flex items-center gap-4">
+              <div className="lg:hidden w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+                <Dumbbell size={20} className="text-black" strokeWidth={2.5} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.3em] mb-0.5">Gestão Fitness</p>
+                <h1 className="text-2xl font-black tracking-tighter text-white uppercase italic">K<span className="text-amber-500">Z</span></h1>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.3em] mb-0.5">Gestão Fitness</p>
-              <h1 className="text-2xl font-black tracking-tighter text-white uppercase italic">KROSS<span className="text-amber-500">ZONE</span></h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="p-3 glass-card rounded-2xl text-neutral-400 hover:text-amber-500 transition-all group lg:hidden">
-              <Menu size={20} className="group-hover:scale-110 transition-transform" />
-            </button>
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 glass-card rounded-full text-[11px] font-bold text-amber-500/80 uppercase tracking-widest border border-amber-500/20">
-              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-              Sistema Ativo
+            <div className="flex items-center gap-4">
+              <button className="p-3 glass-card rounded-2xl text-neutral-400 hover:text-amber-500 transition-all group lg:hidden">
+                <Menu size={20} className="group-hover:scale-110 transition-transform" />
+              </button>
+              <div className="hidden sm:flex items-center gap-2 px-4 py-2 glass-card rounded-full text-[11px] font-bold text-amber-500/80 uppercase tracking-widest border border-amber-500/20">
+                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                Sistema Ativo
+              </div>
             </div>
           </div>
         </header>
