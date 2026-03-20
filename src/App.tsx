@@ -2798,7 +2798,7 @@ export default function App() {
 
         {/* Booking Management Section */}
         <AnimatePresence>
-          {(agendaEvents[`${selectedAgendaDate}-${selectedTimeSlot}`]?.modalities || []).length > 0 ? (
+          {(!session || (agendaEvents[`${selectedAgendaDate}-${selectedTimeSlot}`]?.modalities || []).length > 0) ? (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -2811,18 +2811,18 @@ export default function App() {
               <div className="space-y-4">
                 <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest block">{session ? 'Incluir Aluno em:' : 'Qual modalidade você vai treinar?'}</label>
                 <div className="flex flex-wrap gap-2">
-                  {(agendaEvents[`${selectedAgendaDate}-${selectedTimeSlot}`]?.modalities || []).map(m => (
+                  {(session ? (agendaEvents[`${selectedAgendaDate}-${selectedTimeSlot}`]?.modalities || []).map(m => m.modality) : MODALITIES).map(modName => (
                     <button
-                      key={m.modality}
-                      onClick={() => setSelectedBookingModality(m.modality)}
+                      key={modName}
+                      onClick={() => setSelectedBookingModality(modName)}
                       className={cn(
                         "px-4 py-2 rounded-xl text-[10px] font-black transition-all duration-500 uppercase tracking-widest",
-                        selectedBookingModality === m.modality 
+                        selectedBookingModality === modName 
                           ? "bg-amber-500 text-black shadow-[0_5px_15px_rgba(245,158,11,0.2)]" 
                           : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
                       )}
                     >
-                      {m.modality}
+                      {modName}
                     </button>
                   ))}
                 </div>
