@@ -35,7 +35,10 @@ import {
   Check,
   Cake,
   Upload,
-  Loader2
+  Loader2,
+  Camera,
+  Link2,
+  Phone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -136,15 +139,16 @@ const Modal = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => 
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/80 backdrop-blur-md" 
+          className="absolute inset-0 bg-black/60 backdrop-blur-[12px]" 
         />
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9, y: 40 }}
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 40 }}
-          className="relative w-full max-w-lg bg-[#141414] border border-white/[0.08] rounded-[2.5rem] p-8 z-[201] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden max-h-[90vh] flex flex-col"
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="relative w-full max-w-lg bg-[#0a0a0b]/80 backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] p-8 z-[201] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.9),inset_0_1px_0_0_rgba(255,255,255,0.05)] overflow-hidden max-h-[90vh] flex flex-col"
         >
-          <div className="overflow-y-auto pr-2">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
+          <div className="overflow-y-auto pr-2 custom-scrollbar">
             {children}
           </div>
         </motion.div>
@@ -160,35 +164,38 @@ const StatCard = ({ title, value, trend, isCurrency = false, type = 'success' }:
   isCurrency?: boolean,
   type?: 'success' | 'danger' | 'info'
 }) => (
-  <div className="bg-[#141414] p-6 rounded-[1.5rem] border border-white/[0.05] flex-1">
-    <div className="flex items-center gap-2 mb-4">
+  <div className="glass-card p-6 rounded-[2rem] flex-1 relative overflow-hidden group hover:border-amber-500/30 transition-all duration-500">
+    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-[40px] rounded-full -mr-12 -mt-12 group-hover:bg-amber-500/10 transition-all duration-700" />
+    <div className="flex items-center gap-3 mb-4">
       <div className={cn(
-        "w-8 h-8 rounded-full flex items-center justify-center",
-        type === 'success' ? "bg-emerald-500/10 text-emerald-500" : 
-        type === 'danger' ? "bg-rose-500/10 text-rose-500" :
-        "bg-blue-500/10 text-blue-500"
+        "w-10 h-10 rounded-2xl flex items-center justify-center backdrop-blur-md border",
+        type === 'success' ? "bg-amber-500/10 border-amber-500/20 text-amber-500" : 
+        type === 'danger' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" :
+        "bg-blue-500/10 border-blue-500/20 text-blue-400"
       )}>
-        {type === 'success' ? <TrendingUp size={16} /> : 
-         type === 'danger' ? <TrendingUp size={16} className="rotate-180" /> :
-         <DollarSign size={16} />}
+        {type === 'success' ? <TrendingUp size={18} className="text-glow-gold" /> : 
+         type === 'danger' ? <TrendingUp size={18} className="rotate-180" /> :
+         <DollarSign size={18} />}
       </div>
-      <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest">{title}</span>
+      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.15em]">{title}</span>
     </div>
     <h3 className={cn(
-      "text-2xl font-bold tracking-tight mb-1",
-      type === 'info' ? (Number(value) >= 0 ? "text-blue-500" : "text-rose-500") : "text-white"
+      "text-3xl font-bold tracking-tight mb-1 text-white group-hover:text-amber-50 transition-colors",
+      type === 'info' && (Number(value) < 0 && "text-rose-500")
     )}>
       {isCurrency ? `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : value}
     </h3>
     {trend && (
-      <span className={cn(
-        "text-[10px] font-medium opacity-60",
-        type === 'success' ? "text-emerald-500" : 
-        type === 'danger' ? "text-rose-500" :
-        (Number(value) >= 0 ? "text-blue-400" : "text-rose-400")
-      )}>
-        {trend}
-      </span>
+      <div className="flex items-center gap-1.5">
+        <span className={cn(
+          "text-[11px] font-semibold",
+          type === 'success' ? "text-amber-500/80" : 
+          type === 'danger' ? "text-rose-500/80" :
+          (Number(value) >= 0 ? "text-blue-400/80" : "text-rose-400/80")
+        )}>
+          {trend}
+        </span>
+      </div>
     )}
   </div>
 );
@@ -197,12 +204,25 @@ const NavItem = ({ id, icon: Icon, label, active, onClick }: { id: string, icon:
   <button
     onClick={onClick}
     className={cn(
-      "flex flex-col items-center gap-1 transition-all duration-300 py-1",
-      active ? "text-emerald-500" : "text-neutral-600 hover:text-neutral-400"
+      "relative flex flex-col items-center gap-1.5 transition-all duration-500 py-2 w-full group",
+      active ? "text-amber-500" : "text-neutral-600 hover:text-neutral-400"
     )}
   >
-    <Icon size={24} strokeWidth={active ? 2.5 : 2} />
-    <span className="text-[9px] font-bold uppercase tracking-widest">{label}</span>
+    {active && (
+      <motion.div 
+        layoutId="activeNav"
+        className="absolute left-0 w-1 h-8 bg-amber-500 rounded-r-full glow-gold shadow-[0_0_15px_rgba(245,158,11,0.5)]"
+      />
+    )}
+    <Icon 
+      size={24} 
+      strokeWidth={active ? 2.5 : 2} 
+      className={cn(
+        "transition-transform duration-500 group-hover:scale-110",
+        active && "drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+      )}
+    />
+    <span className="text-[9px] font-bold uppercase tracking-[0.2em]">{label}</span>
   </button>
 );
 
@@ -210,13 +230,16 @@ const ActionButton = ({ label, icon: Icon, primary = false, onClick }: { label: 
   <button 
     onClick={onClick}
     className={cn(
-      "flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-[13px] uppercase tracking-widest transition-all active:scale-95",
+      "flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-[13px] uppercase tracking-widest transition-all active:scale-95 duration-300 overflow-hidden relative group",
       primary 
-        ? "bg-emerald-500 text-[#0D0D0D] shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400 w-full" 
-        : "bg-[#1A1A1A] text-neutral-400 hover:bg-[#222] border border-white/[0.02] w-full"
+        ? "bg-amber-500 text-black shadow-[0_10px_30px_rgba(245,158,11,0.3)] hover:bg-amber-400 hover:shadow-[0_15px_40px_rgba(245,158,11,0.4)] w-full" 
+        : "glass-card text-neutral-300 hover:text-white hover:bg-white/[0.08] w-full"
     )}
   >
-    {Icon && <Icon size={18} strokeWidth={3} />}
+    {primary && (
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+    )}
+    {Icon && <Icon size={18} strokeWidth={2.5} />}
     {label}
   </button>
 );
@@ -638,7 +661,8 @@ export default function App() {
 
       return {
         name: day.day,
-        value: count
+        value: count,
+        plan: 'N/A'
       };
     });
   }, [weekDays, agendaEvents, dashboardPlanFilter, students]);
@@ -654,7 +678,8 @@ export default function App() {
         return {
           name: plan,
           value: count,
-          total: totalStudents
+          total: totalStudents,
+          plan: plan
         };
       });
   }, [students]);
@@ -1087,24 +1112,95 @@ export default function App() {
     setIsAgendaModalOpen(true);
   };
 
-  return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white font-sans pb-32">
-      {/* Top Header */}
-      <header className="px-6 py-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <p className="text-[12px] font-bold text-neutral-500 uppercase tracking-widest">Bem-vindo</p>
-            <h1 className="text-xl font-black tracking-tighter text-white uppercase">Kross Zone</h1>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="p-3 bg-[#141414] rounded-2xl border border-white/[0.05] text-neutral-500 hover:text-white transition-colors lg:hidden">
-            <Menu size={20} />
-          </button>
-        </div>
-      </header>
+  const BackgroundBlobs = () => (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      <motion.div
+        animate={{
+          x: [0, 80, 0],
+          y: [0, 40, 0],
+          scale: [1, 1.1, 1],
+        }}
+        transition={{
+          duration: 30,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amber-500/[0.05] blur-[120px] rounded-full"
+      />
+      <motion.div
+        animate={{
+          x: [0, -60, 0],
+          y: [0, 80, 0],
+          scale: [1, 1.05, 1],
+        }}
+        transition={{
+          duration: 35,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        className="absolute bottom-[10%] right-[-10%] w-[40%] h-[40%] bg-amber-600/[0.03] blur-[100px] rounded-full"
+      />
+      <motion.div
+        animate={{
+          x: [0, 40, 0],
+          y: [0, -40, 0],
+          opacity: [0.05, 0.1, 0.05],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        className="absolute top-[40%] left-[30%] w-[30%] h-[30%] bg-amber-400/[0.02] blur-[80px] rounded-full"
+      />
+    </div>
+  );
 
-      <main className="px-4 max-w-5xl mx-auto">
+  return (
+    <div className="min-h-screen bg-[#0a0a0b] text-[#e5e7eb] font-sans relative overflow-x-hidden selection:bg-amber-500/30 selection:text-amber-200">
+      <BackgroundBlobs />
+      
+      {/* Desktop Sidebar */}
+      <aside className="fixed left-0 top-0 h-full w-24 hidden lg:flex flex-col items-center py-10 glass-card border-r border-white/[0.05] z-50 rounded-none">
+        <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)] mb-12">
+          <Dumbbell size={24} className="text-black" strokeWidth={2.5} />
+        </div>
+        
+        <nav className="flex flex-col gap-8 w-full px-4">
+          <NavItem id="home" icon={LayoutDashboard} label="Home" active={view === 'home'} onClick={() => setView('home')} />
+          <NavItem id="alunos" icon={Users} label="Alunos" active={view === 'alunos'} onClick={() => setView('alunos')} />
+          <NavItem id="experimentais" icon={Zap} label="Leads" active={view === 'experimentais'} onClick={() => setView('experimentais')} />
+          <NavItem id="agenda" icon={CalendarDays} label="Agenda" active={view === 'agenda'} onClick={() => setView('agenda')} />
+          <NavItem id="financeiro" icon={Wallet} label="Caixa" active={view === 'financeiro'} onClick={() => setView('financeiro')} />
+        </nav>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="lg:pl-24 relative z-10 w-full">
+        {/* Top Header */}
+        <header className="px-8 py-10 flex items-center justify-between border-b border-white/[0.03] backdrop-blur-md sticky top-0 z-[40]">
+          <div className="flex items-center gap-4">
+            <div className="lg:hidden w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+              <Dumbbell size={20} className="text-black" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.3em] mb-0.5">Gestão Fitness</p>
+              <h1 className="text-2xl font-black tracking-tighter text-white uppercase italic">KROSS<span className="text-amber-500">ZONE</span></h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="p-3 glass-card rounded-2xl text-neutral-400 hover:text-amber-500 transition-all group lg:hidden">
+              <Menu size={20} className="group-hover:scale-110 transition-transform" />
+            </button>
+            <div className="hidden sm:flex items-center gap-2 px-4 py-2 glass-card rounded-full text-[11px] font-bold text-amber-500/80 uppercase tracking-widest border border-amber-500/20">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+              Sistema Ativo
+            </div>
+          </div>
+        </header>
+
+        <main className="px-4 py-8 lg:px-12 max-w-7xl mx-auto">
+
         <AnimatePresence mode="wait">
           {view === 'home' && (
             <motion.div 
@@ -1115,51 +1211,51 @@ export default function App() {
               className="space-y-6"
             >
               {/* Main Dashboard Chart Section */}
-              <section className="bg-[#141414] p-6 rounded-[2rem] border border-white/[0.05] relative overflow-hidden">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
+              <section className="glass-card p-8 rounded-[2.5rem] relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+                
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
                       <button
                         onClick={() => setDashboardViewMode('distribuicao')}
                         className={cn(
-                          "text-[11px] font-bold uppercase tracking-[0.2em] transition-all",
-                          dashboardViewMode === 'distribuicao' ? "text-emerald-500" : "text-neutral-500 hover:text-neutral-400"
+                          "px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all border whitespace-nowrap",
+                          dashboardViewMode === 'distribuicao' ? "bg-amber-500/10 text-amber-500 border-amber-500/20 text-glow-gold" : "text-neutral-500 border-transparent hover:text-neutral-400"
                         )}
                       >
-                        Distribuição Alunos
+                        Distribuição
                       </button>
-                      <span className="text-neutral-800 text-[10px]">/</span>
                       <button
                         onClick={() => setDashboardViewMode('frequencia')}
                         className={cn(
-                          "text-[11px] font-bold uppercase tracking-[0.2em] transition-all",
-                          dashboardViewMode === 'frequencia' ? "text-emerald-500" : "text-neutral-500 hover:text-neutral-400"
+                          "px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all border whitespace-nowrap",
+                          dashboardViewMode === 'frequencia' ? "bg-amber-500/10 text-amber-500 border-amber-500/20 text-glow-gold" : "text-neutral-500 border-transparent hover:text-neutral-400"
                         )}
                       >
-                        Frequência Semanal
+                        Frequência
                       </button>
-                      <span className="text-neutral-800 text-[10px]">/</span>
                       <button
                         onClick={() => setDashboardViewMode('ranking')}
                         className={cn(
-                          "text-[11px] font-bold uppercase tracking-[0.2em] transition-all",
-                          dashboardViewMode === 'ranking' ? "text-emerald-500" : "text-neutral-500 hover:text-neutral-400"
+                          "px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all border whitespace-nowrap",
+                          dashboardViewMode === 'ranking' ? "bg-amber-500/10 text-amber-500 border-amber-500/20 text-glow-gold" : "text-neutral-500 border-transparent hover:text-neutral-400"
                         )}
                       >
-                        Ranking Aulas
+                        Ranking
                       </button>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 py-2 max-w-[280px] sm:max-w-md">
+                    <div className="flex flex-wrap gap-2">
                       {dashboardViewMode === 'ranking' && (
-                        <div className="flex items-center gap-4 mb-2">
+                        <div className="flex items-center gap-4 pr-2">
                            <div className="flex items-center gap-1.5">
-                             <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                             <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest">Normal</span>
+                             <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                             <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">Normal</span>
                            </div>
                            <div className="flex items-center gap-1.5">
-                             <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
-                             <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest">Wellhub/Gympass</span>
+                             <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+                             <span className="text-[9px] font-bold text-rose-500 uppercase tracking-widest">Wellhub</span>
                            </div>
                         </div>
                       )}
@@ -1169,10 +1265,10 @@ export default function App() {
                             key={plan}
                             onClick={() => setDashboardPlanFilter(plan)}
                             className={cn(
-                              "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border",
+                              "px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all border",
                               dashboardPlanFilter === plan 
-                                ? (plan === 'Wellhub' ? "bg-rose-500 text-white border-rose-500" : "bg-emerald-500 text-[#0D0D0D] border-emerald-500") 
-                                : (plan === 'Wellhub' ? "text-rose-500 border-rose-500/30" : "bg-[#1A1A1A] text-neutral-600 border-white/[0.05] hover:border-white/10")
+                                ? (plan === 'Wellhub' ? "bg-rose-500/20 text-rose-500 border-rose-500/30" : "bg-amber-500/20 text-amber-500 border-amber-500/30") 
+                                : "bg-white/[0.02] text-neutral-600 border-white/[0.05] hover:border-white/10"
                             )}
                           >
                             {plan}
@@ -1180,19 +1276,19 @@ export default function App() {
                         ))
                       ) : (
                         <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full border border-white/5">
-                            Total: {students.length} Alunos
+                          <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest bg-white/[0.03] px-3 py-1.5 rounded-full border border-white/[0.05]">
+                            Total: <span className="text-amber-500">{students.length}</span> Alunos
                           </span>
                         </div>
                       )}
                     </div>
                   </div>
-                  <button className="p-1 text-neutral-700 hover:text-neutral-500">
+                  <button className="self-end lg:self-center p-3 glass-card rounded-2xl text-neutral-600 hover:text-amber-500 transition-colors">
                     <MoreHorizontal size={20} />
                   </button>
                 </div>
                 
-                <div className="relative group">
+                <div className="relative group/chart">
                   {dashboardViewMode === 'ranking' && chartData.length > 5 && (
                     <>
                       <button 
@@ -1200,18 +1296,18 @@ export default function App() {
                           const container = document.getElementById('chart-scroll-container');
                           if (container) container.scrollBy({ left: -200, behavior: 'smooth' });
                         }}
-                        className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-[#1A1A1A] border border-white/10 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"
+                        className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 glass-card rounded-full flex items-center justify-center text-white opacity-0 group-hover/chart:opacity-100 transition-all hover:border-amber-500/40 shadow-2xl"
                       >
-                        <ChevronLeft size={16} />
+                        <ChevronLeft size={18} />
                       </button>
                       <button 
                         onClick={() => {
                           const container = document.getElementById('chart-scroll-container');
                           if (container) container.scrollBy({ left: 200, behavior: 'smooth' });
                         }}
-                        className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-[#1A1A1A] border border-white/10 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"
+                        className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 glass-card rounded-full flex items-center justify-center text-white opacity-0 group-hover/chart:opacity-100 transition-all hover:border-amber-500/40 shadow-2xl"
                       >
-                        <ChevronRight size={16} />
+                        <ChevronRight size={18} />
                       </button>
                     </>
                   )}
@@ -1219,7 +1315,7 @@ export default function App() {
                   <div 
                     id="chart-scroll-container"
                     className={cn(
-                      "h-[260px] w-full",
+                      "h-[280px] w-full",
                       dashboardViewMode === 'ranking' ? "overflow-x-auto overflow-y-hidden no-scrollbar" : "overflow-hidden"
                     )}
                   >
@@ -1236,7 +1332,7 @@ export default function App() {
                             dataKey="name" 
                             axisLine={false} 
                             tickLine={false} 
-                            tick={dashboardViewMode !== 'frequencia' || dashboardPlanFilter === 'Todos' ? { fontSize: 9, fill: '#666', fontWeight: 900, style: { textTransform: 'uppercase' } } : false} 
+                            tick={dashboardViewMode !== 'frequencia' || dashboardPlanFilter === 'Todos' ? { fontSize: 9, fill: '#525252', fontWeight: 800, style: { textTransform: 'uppercase', letterSpacing: '0.1em' } } : false} 
                             dy={15}
                             interval={0}
                             angle={-45}
@@ -1245,21 +1341,23 @@ export default function App() {
                           />
                           <YAxis hide />
                           <Tooltip
-                            cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                            cursor={{ fill: 'rgba(255,255,255,0.02)' }}
                             contentStyle={{ 
-                              background: '#141414', 
-                              border: '1px solid rgba(255,255,255,0.08)',
-                              borderRadius: '1.5rem',
-                              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+                              background: 'rgba(10, 10, 11, 0.8)', 
+                              backdropFilter: 'blur(16px)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '1.25rem',
+                              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                              padding: '12px 16px'
                             }}
-                            itemStyle={{ color: '#fff', fontSize: 12, fontWeight: 900 }}
-                            labelStyle={{ color: '#666', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', marginBottom: 4 }}
+                            itemStyle={{ color: '#fff', fontSize: 13, fontWeight: 700 }}
+                            labelStyle={{ color: '#fbbf24', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}
                           />
                           <Bar 
                             dataKey="value" 
-                            radius={[8, 8, 8, 8]} 
+                            radius={[10, 10, 10, 10]} 
                             barSize={32}
-                            animationDuration={1500}
+                            animationDuration={2000}
                           >
                             <LabelList 
                               dataKey="value" 
@@ -1271,10 +1369,11 @@ export default function App() {
                                   <text 
                                     x={x + width / 2} 
                                     y={y - 12} 
-                                    fill={chartData[props.index]?.plan === 'Wellhub' ? '#fb7185' : '#10b981'} 
-                                    fontSize={11} 
-                                    fontWeight={900} 
+                                    fill={((chartData as any[])[props.index])?.plan === 'Wellhub' ? '#f43f5e' : '#fbbf24'} 
+                                    fontSize={12} 
+                                    fontWeight={800} 
                                     textAnchor="middle"
+                                    className="drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]"
                                   >
                                     {value}
                                   </text>
@@ -1283,14 +1382,15 @@ export default function App() {
                             />
                             {chartData.map((entry: any, index: number) => {
                               const isWellhub = entry.plan === 'Wellhub';
+                              const isTop = index === 0 && dashboardViewMode === 'ranking';
                               return (
                                 <Cell 
                                   key={`cell-${index}`} 
-                                  fill={isWellhub ? '#e11d48' : (index === 0 && dashboardViewMode === 'ranking' ? '#10b981' : '#262626')} 
+                                  fill={isWellhub ? '#f43f5e' : (isTop ? '#fbbf24' : 'rgba(255,255,255,0.05)')} 
                                   className={cn(
-                                    "transition-all duration-500",
-                                    isWellhub && "shadow-[0_0_20px_rgba(225,29,72,0.3)]",
-                                    index === 0 && dashboardViewMode === 'ranking' && "shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                                    "transition-all duration-700",
+                                    isWellhub && "drop-shadow-[0_0_12px_rgba(244,63,94,0.4)]",
+                                    isTop && "drop-shadow-[0_0_15px_rgba(251,191,36,0.4)]"
                                   )}
                                 />
                               );
@@ -1301,7 +1401,6 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-                <div className="absolute bottom-12 left-[calc(50%+10px)] -translate-x-1/2 w-20 h-20 bg-emerald-500/10 rounded-full blur-[40px] pointer-events-none" />
               </section>
 
               {/* Stats Cards */}
@@ -1330,98 +1429,97 @@ export default function App() {
               </section>
 
               {/* New Students Monthly Chart */}
-              <section className="bg-[#141414] p-6 rounded-[2rem] border border-white/[0.05] relative overflow-hidden">
-                <div className="flex items-center justify-between mb-6">
+              <section className="glass-card p-8 rounded-[2.5rem] relative overflow-hidden group">
+                <div className="flex items-center justify-between mb-8">
                   <div>
-                    <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-1">Crescimento</p>
-                    <h2 className="text-white font-black text-lg tracking-tight leading-none">
+                    <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-1.5">Crescimento Mensal</p>
+                    <h2 className="text-white font-black text-2xl tracking-tight leading-none">
                       Novos Alunos
-                      <span className="ml-2 text-emerald-500">
+                      <span className="ml-3 text-amber-500 text-glow-gold">
                         {newStudentsChartData.at(-1)?.total ?? 0}
                       </span>
-                      <span className="text-neutral-600 font-medium text-sm ml-1">este mês</span>
                     </h2>
                   </div>
-                  <div className="flex items-center gap-2 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
-                    <UserPlus size={12} className="text-emerald-500" />
-                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">
-                      {students.length} total
+                  <div className="flex items-center gap-2.5 bg-amber-500/10 px-4 py-2 rounded-2xl border border-amber-500/20">
+                    <UserPlus size={14} className="text-amber-500" />
+                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">
+                      {students.length} Total
                     </span>
                   </div>
                 </div>
-                <div className="h-[180px] w-full">
+                <div className="h-[200px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={newStudentsChartData} margin={{ top: 20, right: 0, left: -40, bottom: 0 }}>
                       <defs>
                         <linearGradient id="newStudentsGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                          <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#fbbf24" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <XAxis
                         dataKey="name"
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 10, fill: '#404040', fontWeight: 700 }}
+                        tick={{ fontSize: 10, fill: '#525252', fontWeight: 800 }}
                         dy={10}
                       />
                       <YAxis hide allowDecimals={false} />
                       <Tooltip
-                        cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }}
+                        cursor={{ stroke: '#fbbf24', strokeWidth: 1.5, strokeDasharray: '6 6' }}
                         contentStyle={{
-                          background: '#141414',
-                          border: '1px solid rgba(255,255,255,0.06)',
-                          borderRadius: '1rem',
-                          fontSize: 12,
-                          fontWeight: 700,
+                          background: 'rgba(10, 10, 11, 0.8)',
+                          backdropFilter: 'blur(16px)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '1.25rem',
+                          padding: '12px 16px',
                           color: '#fff'
                         }}
-                        formatter={(value: any) => [`${value} aluno${value !== 1 ? 's' : ''}`, 'Novos']}
-                        labelStyle={{ color: '#6b7280', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                        formatter={(value: any) => [`${value} aluno${value !== 1 ? 's' : ''}`, 'Matrículas']}
+                        labelStyle={{ color: '#fbbf24', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}
                       />
                       <Area
                         type="monotone"
                         dataKey="total"
-                        stroke="#10b981"
-                        strokeWidth={2.5}
+                        stroke="#fbbf24"
+                        strokeWidth={3}
                         fill="url(#newStudentsGrad)"
-                        dot={{ fill: '#10b981', r: 4, strokeWidth: 0 }}
-                        activeDot={{ fill: '#10b981', r: 6, strokeWidth: 2, stroke: '#0D0D0D' }}
-                        animationDuration={1500}
+                        dot={{ fill: '#fbbf24', r: 5, strokeWidth: 0 }}
+                        activeDot={{ fill: '#fbbf24', r: 8, strokeWidth: 3, stroke: '#0a0a0b' }}
+                        animationDuration={2500}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-32 h-16 bg-emerald-500/5 rounded-full blur-[40px] pointer-events-none" />
               </section>
 
               {/* Quick Actions (Ações) */}
-              <section className="bg-[#141414] p-6 rounded-[2rem] border border-white/[0.05]">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.2em]">Ações</h2>
+              <section className="glass-card p-8 rounded-[2.5rem]">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.3em]">Ações Rápidas</h2>
                   {birthdayStudents.length > 0 && (
                     <motion.div 
                       initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="flex items-center gap-2 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20"
+                      className="flex items-center gap-2 bg-rose-500/10 px-4 py-1.5 rounded-full border border-rose-500/20"
                     >
-                      <Cake size={12} className="text-rose-500" />
-                      <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Aniversariantes do Dia!</span>
+                      <Cake size={14} className="text-rose-500" />
+                      <span className="text-[9px] font-bold text-rose-500 uppercase tracking-widest">Aniversariantes!</span>
                     </motion.div>
                   )}
                 </div>
 
                 {birthdayStudents.length > 0 && (
-                  <div className="mb-6 space-y-2">
+                  <div className="mb-8 space-y-3">
                     {birthdayStudents.map((s: any) => (
-                      <div key={s.id} className="bg-gradient-to-r from-rose-500/10 to-transparent p-4 rounded-2xl border border-rose-500/10 flex items-center justify-between group">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-rose-500/20 rounded-full flex items-center justify-center text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.2)]">
-                            <Cake size={20} />
+                      <div key={s.id} className="bg-gradient-to-r from-rose-500/10 to-transparent p-5 rounded-2xl border border-rose-500/10 flex items-center justify-between group overflow-hidden relative">
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/5 blur-2xl rounded-full -mr-8 -mt-8" />
+                        <div className="flex items-center gap-4 relative z-10">
+                          <div className="w-12 h-12 bg-rose-500/20 rounded-2xl flex items-center justify-center text-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.2)]">
+                            <Cake size={24} />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-0.5">Parabéns!</p>
-                            <p className="text-sm font-bold text-white">{s.name}</p>
+                            <p className="text-[10px] font-bold text-rose-500 uppercase tracking-[0.2em] mb-0.5">Parabéns!</p>
+                            <p className="text-base font-bold text-white">{s.name}</p>
                           </div>
                         </div>
                         <button 
@@ -1429,9 +1527,9 @@ export default function App() {
                             const text = `Parabéns ${s.name}! Feliz aniversário de toda a equipe Kross Zone! 🎂💪`;
                             window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
                           }}
-                          className="bg-rose-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(244,63,94,0.3)] hover:scale-105 transition-all"
+                          className="bg-rose-500 text-white px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(244,63,94,0.3)] hover:scale-105 active:scale-95 transition-all relative z-10"
                         >
-                          Dar Parabéns
+                          Parabenizar
                         </button>
                       </div>
                     ))}
@@ -1457,53 +1555,65 @@ export default function App() {
               className="space-y-6"
             >
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-black tracking-tighter uppercase">Experimentais</h2>
+                <div>
+                  <h2 className="text-2xl font-black tracking-tighter uppercase italic">Aulas <span className="text-amber-500">Experimentais</span></h2>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mt-1">Gerencie leads e novos interessados</p>
+                </div>
                 <button 
                   onClick={() => { setEditingExperimental(null); setNewStudentName(''); setView('experimentais'); setIsExperimentalModalOpen(true); }}
-                  className="w-10 h-10 bg-emerald-500 text-[#0D0D0D] rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)] active:scale-95 transition-all"
+                  className="w-12 h-12 bg-amber-500 text-black rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)] active:scale-95 transition-all hover:bg-amber-400"
                 >
                   <Plus size={24} strokeWidth={3} />
                 </button>
               </div>
 
               {/* Search Bar */}
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600" size={18} />
+              <div className="relative group">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-amber-500 transition-colors" size={20} />
                 <input 
                   type="text" 
-                  placeholder="Buscar experimental..." 
-                  className="w-full bg-[#141414] border border-white/[0.05] rounded-2xl py-4 pl-12 pr-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
+                  placeholder="Pesquisar experimental..." 
+                  className="w-full glass-card rounded-[2rem] py-5 pl-14 pr-6 text-sm font-medium focus:outline-none focus:border-amber-500/50 transition-all text-white placeholder:text-neutral-600 shadow-xl"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
 
               {/* Experimental List */}
-              <div className="space-y-3 pb-10">
-                {filteredExperimental.map((s) => (
-                  <div key={s.id} className="bg-[#141414] p-5 rounded-2xl border border-white/[0.05] flex items-center justify-between group">
-                    <div className="flex items-center gap-4">
-                      <div className="relative w-12 h-12 flex-shrink-0">
-                        <div className="w-full h-full bg-amber-500/10 rounded-full flex items-center justify-center text-amber-500">
-                          <Zap size={20} />
+              <div className="space-y-4 pb-24">
+                {filteredExperimental.map((s, idx) => (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    key={s.id} 
+                    className="glass-card-premium p-6 rounded-[2rem] flex items-center justify-between group hover:border-amber-500/30 transition-all duration-500 relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex items-center gap-5 relative z-10">
+                      <div className="relative w-14 h-14 flex-shrink-0">
+                        <div className="w-full h-full bg-amber-500/10 rounded-2xl border border-amber-500/20 flex items-center justify-center text-amber-500">
+                          <Zap size={24} className="text-glow-gold" />
                         </div>
-                        {/* Attendance Counter Badge for experimental */}
                         {(() => {
                           const count = normalizedAttendanceMap[s.name.toLowerCase().trim()] || 0;
                           return count > 0 && (
-                            <div className="absolute -top-1 -right-1 bg-emerald-500 text-[#0D0D0D] text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#141414] shadow-lg z-10">
+                            <div className="absolute -top-2 -right-2 bg-amber-500 text-black text-[9px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#0a0a0b] shadow-[0_0_10px_rgba(245,158,11,0.5)] z-10">
                               {count}
                             </div>
                           );
                         })()}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-white mb-0.5">{s.name}</p>
-                        <div className="flex flex-wrap gap-2 mb-2">
+                        <p className="text-base font-bold text-white mb-1 group-hover:text-amber-50 transition-colors">{s.name}</p>
+                        <div className="flex flex-wrap gap-3 mb-2">
                           {s.enrollmentDate && (
-                            <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-tighter">
-                              Data: {formatDisplayDate(s.enrollmentDate)}
-                            </span>
+                            <div className="flex items-center gap-1.5 opacity-60">
+                              <Calendar size={10} className="text-amber-500" />
+                              <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">
+                                {formatDisplayDate(s.enrollmentDate)}
+                              </span>
+                            </div>
                           )}
                           {s.phone && (
                             <button 
@@ -1511,21 +1621,22 @@ export default function App() {
                                 const cleanPhone = s.phone.replace(/\D/g, '');
                                 window.open(`https://wa.me/55${cleanPhone}`, '_blank');
                               }}
-                              className="text-[8px] text-emerald-500 font-bold uppercase tracking-tighter flex items-center gap-1 hover:text-emerald-400 transition-colors"
+                              className="text-[9px] text-amber-500 font-bold uppercase tracking-widest flex items-center gap-1.5 hover:text-amber-400 transition-colors bg-amber-500/5 px-2 py-0.5 rounded-md border border-amber-500/10"
                             >
-                              Zap: {s.phone}
+                              <CheckCircle2 size={10} />
+                              {s.phone}
                             </button>
                           )}
                         </div>
                         {(s.preferredTime || s.preferredModality) && (
                           <div className="flex gap-2">
                             {s.preferredTime && (
-                              <span className="text-[9px] bg-white/5 text-neutral-400 px-2 py-0.5 rounded-full border border-white/5">
+                              <span className="text-[9px] bg-white/[0.03] text-neutral-400 px-3 py-1 rounded-full border border-white/[0.05] font-bold">
                                 {s.preferredTime}
                               </span>
                             )}
                             {s.preferredModality && (
-                              <span className="text-[9px] bg-emerald-500/5 text-emerald-500/60 px-2 py-0.5 rounded-full border border-emerald-500/10 uppercase font-black tracking-tighter">
+                              <span className="text-[9px] bg-amber-500/10 text-amber-500 px-3 py-1 rounded-full border border-amber-500/20 uppercase font-black tracking-widest text-glow-gold">
                                 {s.preferredModality}
                               </span>
                             )}
@@ -1533,7 +1644,7 @@ export default function App() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 relative z-10">
                       <button 
                         onClick={() => {
                           if (window.confirm('Converter este experimental em aluno regular?')) {
@@ -1547,14 +1658,14 @@ export default function App() {
                             setExperimentalStudents(experimentalStudents.filter(ex => ex.id !== s.id));
                           }
                         }}
-                        className="p-2 text-emerald-500 bg-emerald-500/10 rounded-lg hover:bg-emerald-500/20 transition-all"
+                        className="w-10 h-10 flex items-center justify-center text-amber-500 bg-amber-500/5 border border-amber-500/10 rounded-xl hover:bg-amber-500 hover:text-black transition-all"
                         title="Converter em Aluno"
                       >
                         <UserPlus size={18} />
                       </button>
                       <button 
                         onClick={() => handleEditExperimental(s)}
-                        className="p-2 text-neutral-500 bg-[#1A1A1A] rounded-lg opacity-80 hover:opacity-100 transition-opacity"
+                        className="w-10 h-10 flex items-center justify-center text-neutral-500 bg-white/[0.03] border border-white/[0.05] rounded-xl hover:text-white hover:bg-white/[0.08] transition-all"
                       >
                         <Edit2 size={18} />
                       </button>
@@ -1564,23 +1675,23 @@ export default function App() {
                             setExperimentalStudents(experimentalStudents.filter(ex => ex.id !== s.id));
                           }
                         }}
-                        className="p-2 text-neutral-700 bg-[#1A1A1A] rounded-lg opacity-80 hover:opacity-100 transition-opacity"
+                        className="w-10 h-10 flex items-center justify-center text-rose-500/50 bg-rose-500/5 border border-rose-500/10 rounded-xl hover:text-rose-500 hover:bg-rose-500/10 transition-all"
                       >
                         <Trash2 size={18} />
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
                 {filteredExperimental.length === 0 && (
-                  <div className="text-center py-20 opacity-30">
-                    <Zap size={40} className="mx-auto mb-4" />
-                    <p className="text-sm font-bold uppercase tracking-widest">Nenhum experimental encontrado</p>
+                  <div className="text-center py-24 opacity-20">
+                    <Zap size={48} className="mx-auto mb-4 text-amber-500" />
+                    <p className="text-xs font-bold uppercase tracking-[0.3em]">Nenhum registro encontrado</p>
                   </div>
                 )}
               </div>
             </motion.div>
           )}
-            {view === 'alunos' && (
+          {view === 'alunos' && (
             <motion.div 
               key="alunos"
               initial={{ opacity: 0, y: 10 }}
@@ -1589,99 +1700,117 @@ export default function App() {
               className="space-y-6"
             >
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-black tracking-tighter uppercase">Alunos</h2>
+                <div>
+                  <h2 className="text-2xl font-black tracking-tighter uppercase italic">Lista de <span className="text-amber-500">Alunos</span></h2>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mt-1">Gerencie sua base de membros ativos</p>
+                </div>
                 <button 
                   onClick={() => { setEditingStudent(null); setNewStudentName(''); setSelectedPlan('K1'); setSelectedPayment('Em dia'); setIsModalOpen(true); }}
-                  className="w-10 h-10 bg-emerald-500 text-[#0D0D0D] rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)] active:scale-95 transition-all"
+                  className="w-12 h-12 bg-amber-500 text-black rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)] active:scale-95 transition-all hover:bg-amber-400"
                 >
                   <Plus size={24} strokeWidth={3} />
                 </button>
               </div>
 
               {/* Search Bar */}
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600" size={18} />
+              <div className="relative group">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-amber-500 transition-colors" size={20} />
                 <input 
                   type="text" 
-                  placeholder="Buscar aluno..." 
-                  className="w-full bg-[#141414] border border-white/[0.05] rounded-2xl py-4 pl-12 pr-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
+                  placeholder="Pesquisar por nome ou plano..." 
+                  className="w-full glass-card rounded-[2rem] py-5 pl-14 pr-6 text-sm font-medium focus:outline-none focus:border-amber-500/50 transition-all text-white placeholder:text-neutral-600 shadow-xl"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
 
               {/* Student Status Cards */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-4">
                 {[
-                  { label: 'Total', value: students.length.toString(), color: 'text-neutral-400' },
-                  { label: 'Em dia', value: students.filter(s => s.status === 'Em dia').length.toString(), color: 'text-emerald-500' },
-                  { label: 'Pendente', value: students.filter(s => s.status === 'Pendente').length.toString(), color: 'text-rose-500' },
+                  { label: 'Matrículas', value: students.length.toString(), color: 'text-white' },
+                  { label: 'Em Dia', value: students.filter(s => s.status === 'Em dia').length.toString(), color: 'text-amber-500' },
+                  { label: 'Atrasos', value: students.filter(s => s.status === 'Pendente').length.toString(), color: 'text-rose-500' },
                 ].map((stat) => (
-                  <div key={stat.label} className="bg-[#141414] p-4 rounded-2xl border border-white/[0.05] text-center">
-                    <p className={cn("text-xl font-black mb-0.5", stat.color)}>{stat.value}</p>
-                    <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">{stat.label}</p>
+                  <div key={stat.label} className="glass-card p-5 rounded-[2rem] text-center relative overflow-hidden group/stat">
+                    <div className="absolute inset-0 bg-white/[0.01] group-hover/stat:bg-white/[0.03] transition-colors" />
+                    <p className={cn("text-2xl font-black mb-1 relative z-10", stat.color)}>{stat.value}</p>
+                    <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-[0.2em] relative z-10">{stat.label}</p>
                   </div>
                 ))}
               </div>
 
               {/* Students List */}
-              <div className="space-y-3">
-                {filteredStudents.map((s) => (
-                  <div key={s.id} className="bg-[#141414] p-5 rounded-2xl border border-white/[0.05] flex items-center justify-between group">
-                    <div className="flex items-center gap-4">
+              <div className="space-y-4 pb-24">
+                {filteredStudents.map((s, idx) => (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    key={s.id} 
+                    className="glass-card-premium p-6 rounded-[2.5rem] flex items-center justify-between group hover:border-amber-500/30 transition-all duration-500 relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex items-center gap-5 relative z-10">
                       {s.photoUrl ? (
-                        <div className="relative w-12 h-12 flex-shrink-0">
-                          <div className="w-full h-full rounded-full overflow-hidden border border-white/10 bg-[#1A1A1A]">
+                        <div className="relative w-16 h-16 flex-shrink-0">
+                          <div className="w-full h-full rounded-[1.5rem] overflow-hidden border-2 border-white/[0.08] group-hover:border-amber-500/30 transition-colors bg-[#1A1A1A] p-0.5">
                             <img 
                               src={s.photoUrl} 
                               alt={s.name} 
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover rounded-[1.25rem]"
                             />
                           </div>
-                          {/* Attendance Counter Badge for photo */}
                           {(() => {
                             const count = normalizedAttendanceMap[s.name.toLowerCase().trim()] || 0;
                             return count > 0 && (
-                              <div className="absolute -top-1 -right-1 bg-emerald-500 text-[#0D0D0D] text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#141414] shadow-lg z-10">
+                              <div className="absolute -top-2 -right-2 bg-amber-500 text-black text-[9px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#0a0a0b] shadow-[0_0_10px_rgba(245,158,11,0.5)] z-10">
                                 {count}
                               </div>
                             );
                           })()}
                         </div>
                       ) : (
-                        <div className="w-12 h-12 bg-[#1A1A1A] rounded-full flex items-center justify-center text-neutral-600 flex-shrink-0 relative">
-                          <Users size={20} />
-                          {/* Attendance Counter Badge */}
+                        <div className="w-16 h-16 bg-white/[0.03] border border-white/[0.08] group-hover:border-amber-500/20 rounded-[1.5rem] flex items-center justify-center text-neutral-500 flex-shrink-0 relative transition-all">
+                          <Users size={24} />
                           {(() => {
                             const count = normalizedAttendanceMap[s.name.toLowerCase().trim()] || 0;
                             return count > 0 && (
-                              <div className="absolute -top-1 -right-1 bg-emerald-500 text-[#0D0D0D] text-[8px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#141414] shadow-lg">
+                              <div className="absolute -top-2 -right-2 bg-amber-500 text-black text-[9px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#0a0a0b] shadow-[0_0_10px_rgba(245,158,11,0.5)]">
                                 {count}
                               </div>
                             );
                           })()}
                         </div>
                       )}
-                      <div>
-                        <p className="text-sm font-bold text-white mb-0.5">{s.name}</p>
-                        <p className="text-[11px] text-neutral-500 font-medium mb-1">
-                          <span className={cn(s.plan === 'Wellhub' && "text-rose-500 font-black tracking-widest")}>{s.plan}</span> • R$ {s.value?.toLocaleString('pt-BR') || '0,00'}
-                        </p>
-                        <div className="flex flex-wrap gap-2 mb-2">
+                      <div className="flex-1">
+                        <p className="text-base font-bold text-white mb-1 group-hover:text-amber-50 transition-colors">{s.name}</p>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={cn(
+                            "text-[10px] font-bold px-2.5 py-0.5 rounded-full border tracking-widest",
+                            s.plan === 'Wellhub' ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20 text-glow-gold"
+                          )}>
+                            {s.plan}
+                          </span>
+                          <span className="text-[10px] text-neutral-500 font-bold tracking-tight">
+                            R$ {s.value?.toLocaleString('pt-BR') || '0,00'}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
                           {s.enrollmentDate && (
-                            <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-tighter">
-                              Matrícula: {formatDisplayDate(s.enrollmentDate)}
-                            </span>
+                            <div className="flex items-center gap-1.5 opacity-60">
+                              <Calendar size={10} />
+                              <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">
+                                {formatDisplayDate(s.enrollmentDate)}
+                              </span>
+                            </div>
                           )}
                           {s.preferredDueDay && (
-                            <span className="text-[8px] text-emerald-600 font-bold uppercase tracking-tighter">
-                              Vence dia: {s.preferredDueDay}
-                            </span>
-                          )}
-                          {s.birthDate && (
-                            <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-tighter">
-                              Nasc: {formatDisplayDate(s.birthDate)}
-                            </span>
+                            <div className="flex items-center gap-1.5 opacity-80">
+                              <Clock size={10} className="text-amber-500" />
+                              <span className="text-[9px] text-amber-500 font-bold uppercase tracking-wider">
+                                Vencimento: {s.preferredDueDay}
+                              </span>
+                            </div>
                           )}
                           {s.phone && (
                             <button 
@@ -1689,53 +1818,34 @@ export default function App() {
                                 const cleanPhone = s.phone.replace(/\D/g, '');
                                 window.open(`https://wa.me/55${cleanPhone}`, '_blank');
                               }}
-                              className="text-[8px] text-emerald-500 font-bold uppercase tracking-tighter flex items-center gap-1 hover:text-emerald-400 transition-colors"
+                              className="text-[9px] text-amber-500 font-bold uppercase tracking-widest flex items-center gap-1.5 hover:text-amber-400 transition-colors"
                             >
-                              Zap: {s.phone}
+                              <CheckCircle2 size={10} />
+                              WhatsApp
                             </button>
                           )}
                         </div>
-                        {(s.preferredTime || s.preferredModality) && (
-                          <div className="flex gap-2">
-                            {s.preferredTime && (
-                              <span className="text-[9px] bg-white/5 text-neutral-400 px-2 py-0.5 rounded-full border border-white/5">
-                                {s.preferredTime}
-                              </span>
-                            )}
-                            {s.preferredModality && (
-                              <span className="text-[9px] bg-emerald-500/5 text-emerald-500/60 px-2 py-0.5 rounded-full border border-emerald-500/10 uppercase font-black tracking-tighter">
-                                {s.preferredModality}
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2 relative z-10">
                       <button 
                         onClick={() => handleTogglePaymentStatus(s)}
                         className={cn(
-                          "p-2 rounded-lg transition-all",
-                          s.status === 'Em dia' ? "text-emerald-500 bg-emerald-500/10" : "text-rose-500 bg-rose-500/10 shadow-[0_0_10px_rgba(244,63,94,0.2)]"
+                          "w-10 h-10 flex items-center justify-center rounded-xl transition-all",
+                          s.status === 'Em dia' ? "text-amber-500 bg-amber-500/5 border border-amber-500/20" : "text-rose-500 bg-rose-500/5 border border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.2)]"
                         )}
-                        title={s.status === 'Em dia' ? 'Marcar como Pendente' : 'Marcar como Pago'}
+                        title={s.status === 'Em dia' ? 'Pendente' : 'Confirmar Pagamento'}
                       >
-                        <CheckCircle2 size={18} />
+                        <CheckCircle2 size={20} />
                       </button>
                       <button 
                         onClick={() => handleEditStudent(s)}
-                        className="p-2 text-neutral-500 bg-[#1A1A1A] rounded-lg opacity-80 hover:opacity-100 transition-opacity"
+                        className="w-10 h-10 flex items-center justify-center text-neutral-400 bg-white/[0.03] border border-white/[0.05] rounded-xl hover:text-white hover:bg-white/[0.08] transition-all"
                       >
                         <Edit2 size={18} />
                       </button>
-                      <button 
-                        onClick={() => handleDeleteStudent(s.id)}
-                        className="p-2 text-neutral-700 bg-[#1A1A1A] rounded-lg opacity-80 hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 size={18} />
-                      </button>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </motion.div>
@@ -1749,24 +1859,27 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
-              <div className="flex items-center justify-between mb-4 px-2">
-                <h2 className="text-xl font-black tracking-tighter uppercase">Agenda</h2>
+              <div className="flex items-center justify-between px-2">
+                <div>
+                  <h2 className="text-2xl font-black tracking-tighter uppercase italic">Agenda de <span className="text-amber-500">Treinos</span></h2>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mt-1">Organize as sessões e frequências</p>
+                </div>
               </div>
 
               {/* Week Selector Section */}
-              <section className="bg-[#141414] p-6 rounded-[2rem] border border-white/[0.05]">
-                <div className="flex items-center justify-between mb-6 px-2">
+              <section className="glass-card p-6 rounded-[2.5rem] relative overflow-hidden">
+                <div className="flex items-center justify-between mb-8 px-2 relative z-10">
                   <button 
                     onClick={() => {
                       const newStart = new Date(currentWeekStart);
                       newStart.setDate(newStart.getDate() - 7);
                       setCurrentWeekStart(newStart);
                     }}
-                    className="p-1 text-neutral-700 hover:text-white transition-colors"
+                    className="w-10 h-10 flex items-center justify-center text-neutral-500 hover:text-amber-500 transition-colors bg-white/[0.03] rounded-xl border border-white/[0.05]"
                   >
                     <ChevronLeft size={20} />
                   </button>
-                  <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest">
+                  <span className="text-[11px] font-black text-amber-500 uppercase tracking-[0.2em] text-glow-gold">
                     {currentWeekStart.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                   </span>
                   <button 
@@ -1775,33 +1888,35 @@ export default function App() {
                       newStart.setDate(newStart.getDate() + 7);
                       setCurrentWeekStart(newStart);
                     }}
-                    className="p-1 text-neutral-700 hover:text-white transition-colors"
+                    className="w-10 h-10 flex items-center justify-center text-neutral-500 hover:text-amber-500 transition-colors bg-white/[0.03] rounded-xl border border-white/[0.05]"
                   >
                     <ChevronRight size={20} />
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 relative z-10">
                   {weekDays.map((day) => (
                     <button 
                       key={day.fullDate}
                       onClick={() => setSelectedAgendaDate(day.fullDate)}
                       className={cn(
-                        "flex flex-col items-center justify-center py-4 rounded-2xl transition-all duration-300",
+                        "flex flex-col items-center justify-center py-5 rounded-[1.5rem] transition-all duration-500 border",
                         selectedAgendaDate === day.fullDate 
-                          ? "bg-emerald-500 text-[#0D0D0D] shadow-[0_0_20px_rgba(16,185,129,0.3)]" 
-                          : "bg-[#1A1A1A] text-neutral-500 hover:bg-[#222]"
+                          ? "bg-amber-500 text-black border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.3)] scale-105 z-20" 
+                          : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:bg-white/[0.05] hover:border-amber-500/20"
                       )}
                     >
-                      <span className="text-[9px] font-black mb-1">{day.day}</span>
-                      <span className="text-lg font-black">{day.date}</span>
+                      <span className={cn("text-[9px] font-black mb-1 uppercase tracking-widest", selectedAgendaDate === day.fullDate ? "text-black/60" : "text-neutral-500")}>
+                        {day.day}
+                      </span>
+                      <span className="text-xl font-black">{day.date}</span>
                     </button>
                   ))}
                 </div>
               </section>
 
               {/* Time Slots List */}
-              <div className="space-y-2">
+              <div className="space-y-3 pb-24">
                 {TIME_SLOTS.map((time, idx) => {
                   const key = `${selectedAgendaDate}-${time}`;
                   const slot = agendaEvents[key] || { modalities: [] };
@@ -1814,48 +1929,50 @@ export default function App() {
                         setSelectedTimeSlot(time);
                         setIsAgendaModalOpen(true);
                       }}
-                      className="bg-[#141414] p-5 rounded-2xl border border-white/[0.05] flex flex-col gap-4 group cursor-pointer hover:border-white/10 transition-colors"
+                      className="glass-card p-6 rounded-[2rem] flex flex-col gap-5 group cursor-pointer hover:border-amber-500/20 transition-all duration-300 relative overflow-hidden"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-2xl rounded-full -mr-12 -mt-12 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      
+                      <div className="flex items-center justify-between relative z-10">
                         <div className="flex items-center gap-6">
-                          <div className="flex items-center gap-2 text-white">
-                            <Clock size={16} className="text-neutral-500" />
-                            <span className="text-sm font-bold">{time}</span>
+                          <div className="flex items-center gap-3 text-white">
+                            <Clock size={18} className="text-amber-500" />
+                            <span className="text-base font-black tracking-tight">{time}</span>
                           </div>
                           
                           <div className="flex flex-wrap gap-2">
                             {slot.modalities.map((m, mIdx) => (
-                              <div key={mIdx} className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1.5">
-                                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{m.modality}</span>
-                                <span className="text-[10px] font-black text-emerald-400/60 ml-1">{m.bookings.length}</span>
+                              <div key={mIdx} className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1.5">
+                                <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest text-glow-gold">{m.modality}</span>
+                                <span className="text-[10px] font-black text-amber-400/60 ml-1">{m.bookings.length}</span>
                               </div>
                             ))}
                             {slot.modalities.length === 0 && (
-                              <span className="text-[10px] text-neutral-700 font-bold uppercase tracking-widest">Livre</span>
+                              <span className="text-[10px] text-neutral-700 font-bold uppercase tracking-[0.3em]">Disponível</span>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-neutral-600">
-                          <User size={14} className="text-neutral-700 group-hover:text-emerald-500 transition-colors" />
-                          <span className="text-[11px] font-black">{totalAttendees}</span>
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.03] rounded-full border border-white/[0.05]">
+                          <User size={14} className="text-neutral-500 group-hover:text-amber-500 transition-colors" />
+                          <span className="text-[11px] font-black text-neutral-400">{totalAttendees}</span>
                         </div>
                       </div>
 
                       {/* Display Student Names */}
                       {slot.modalities.length > 0 && (
-                        <div className="flex flex-wrap gap-x-4 gap-y-1.5 pl-8 border-l border-white/[0.03]">
+                        <div className="flex flex-wrap gap-x-5 gap-y-2 pl-8 border-l-2 border-amber-500/20 relative z-10">
                           {slot.modalities.map(m => m.bookings.map(b => (
-                            <div key={b.id} className="flex items-center gap-1.5">
+                            <div key={b.id} className="flex items-center gap-2">
                               {b.isExperimental ? (
-                                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/10 border border-amber-500/20 rounded-md">
-                                  <Zap size={8} className="text-amber-500 fill-amber-500" />
-                                  <span className="text-[9px] font-black text-amber-500 uppercase tracking-tighter">
+                                <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                  <Zap size={10} className="text-amber-500 fill-amber-500" />
+                                  <span className="text-[9px] font-black text-amber-500 uppercase tracking-tight">
                                     EXP: {b.studentName}
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-[10px] font-medium text-neutral-400">
+                                <span className="text-[10px] font-bold text-neutral-500 group-hover:text-neutral-300 transition-colors">
                                   {b.studentName}
                                 </span>
                               )}
@@ -1878,102 +1995,125 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-xl font-black tracking-tighter uppercase">Financeiro</h2>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-black tracking-tighter uppercase italic">Controle <span className="text-amber-500">Financeiro</span></h2>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mt-1">Fluxo de caixa e faturamento</p>
+                </div>
                 <button 
                   onClick={() => { setIsFinanceModalOpen(true); setNewTransType('in'); }}
-                  className="w-10 h-10 bg-emerald-500 text-[#0D0D0D] rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)] active:scale-95 transition-all"
+                  className="w-12 h-12 bg-amber-500 text-black rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)] active:scale-95 transition-all hover:bg-amber-400"
                 >
                   <Plus size={24} strokeWidth={3} />
                 </button>
               </div>
 
               {/* Summary Cards */}
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-[#141414] p-4 rounded-2xl border border-white/[0.05] flex flex-col items-center justify-center">
-                  <div className="flex flex-col items-center mb-1">
-                    <span className="text-[10px] font-black text-emerald-500">R$ {totalInCompleted.toLocaleString('pt-BR')}</span>
-                    <span className="text-[8px] font-bold text-neutral-600 uppercase">Realizado</span>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="glass-card p-5 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group">
+                  <div className="flex flex-col items-center relative z-10">
+                    <span className="text-[13px] font-black text-amber-500 text-glow-gold mb-1">R$ {totalInCompleted.toLocaleString('pt-BR')}</span>
+                    <span className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest">Liquidez</span>
                   </div>
-                  <div className="flex flex-col items-center opacity-60">
-                    <span className="text-[9px] font-bold text-emerald-400/80">R$ {totalInPending.toLocaleString('pt-BR')}</span>
+                  <div className="mt-3 pt-3 border-t border-white/5 w-full flex flex-col items-center opacity-40 relative z-10">
+                    <span className="text-[10px] font-bold text-amber-500/80">R$ {totalInPending.toLocaleString('pt-BR')}</span>
                     <span className="text-[7px] font-bold text-neutral-600 uppercase tracking-tighter">Previsto</span>
                   </div>
-                  <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mt-2 border-t border-white/5 pt-1 w-full text-center">Receitas</p>
+                  <p className="absolute bottom-1 right-2 text-[6px] font-black text-neutral-700 uppercase tracking-[0.3em]">Receitas</p>
                 </div>
 
-                <div className="bg-[#141414] p-4 rounded-2xl border border-white/[0.05] flex flex-col items-center justify-center">
-                  <div className="flex flex-col items-center mb-1">
-                    <span className="text-[10px] font-black text-rose-500">R$ {totalOutCompleted.toLocaleString('pt-BR')}</span>
-                    <span className="text-[8px] font-bold text-neutral-600 uppercase">Realizado</span>
+                <div className="glass-card p-5 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group">
+                  <div className="flex flex-col items-center relative z-10">
+                    <span className="text-[13px] font-black text-rose-500 mb-1">R$ {totalOutCompleted.toLocaleString('pt-BR')}</span>
+                    <span className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest">Realizado</span>
                   </div>
-                  <div className="flex flex-col items-center opacity-60">
-                    <span className="text-[9px] font-bold text-rose-400/80">R$ {totalOutPending.toLocaleString('pt-BR')}</span>
-                    <span className="text-[7px] font-bold text-neutral-600 uppercase tracking-tighter">Previsto</span>
+                  <div className="mt-3 pt-3 border-t border-white/5 w-full flex flex-col items-center opacity-40 relative z-10">
+                    <span className="text-[10px] font-bold text-rose-400/80">R$ {totalOutPending.toLocaleString('pt-BR')}</span>
+                    <span className="text-[7px] font-bold text-neutral-600 uppercase tracking-tighter">Pendente</span>
                   </div>
-                  <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mt-2 border-t border-white/5 pt-1 w-full text-center">Despesas</p>
+                  <p className="absolute bottom-1 right-2 text-[6px] font-black text-neutral-700 uppercase tracking-[0.3em]">Despesas</p>
                 </div>
 
-                <div className="bg-[#141414] p-4 rounded-2xl border border-white/[0.05] flex flex-col items-center justify-center">
-                  <p className={cn("text-xs font-black mb-1", totalProfit >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                <div className="glass-card p-5 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group border-amber-500/10">
+                  <div className="absolute inset-0 bg-amber-500/[0.02]" />
+                  <p className={cn("text-sm font-black mb-1 relative z-10", totalProfit >= 0 ? "text-amber-500 text-glow-gold" : "text-rose-500")}>
                     R$ {totalProfit.toLocaleString('pt-BR')}
                   </p>
-                  <p className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest">Lucro Real</p>
-                  <div className="mt-2 text-[7px] font-bold text-neutral-600 uppercase text-center leading-tight">
-                    Previsto Final:<br/>
-                    <span className="text-neutral-400">R$ {(totalProfit + totalInPending - totalOutPending).toLocaleString('pt-BR')}</span>
+                  <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest relative z-10">Saldo Real</p>
+                  <div className="mt-4 text-[7px] font-bold text-neutral-500 uppercase text-center leading-tight relative z-10">
+                    Projeção:<br/>
+                    <span className="text-white/60">R$ {(totalProfit + totalInPending - totalOutPending).toLocaleString('pt-BR')}</span>
                   </div>
                 </div>
               </div>
 
               {/* Evolution Chart */}
-              <section className="bg-[#141414] p-6 rounded-[2rem] border border-white/[0.05] relative overflow-hidden">
-                <h2 className="text-[11px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-8">Receitas vs Despesas</h2>
-                <div className="h-[180px] w-full">
+              <section className="glass-card p-8 rounded-[2.5rem] relative overflow-hidden">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.3em]">Performance Financeira</h2>
+                  <div className="flex gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase">Receitas</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase">Despesas</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="h-[200px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={financeChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
-                        <linearGradient id="colorReceitas" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        <linearGradient id="colorReceitasFin" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
                         </linearGradient>
-                        <linearGradient id="colorDespesas" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.22}/>
+                        <linearGradient id="colorDespesasFin" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15}/>
                           <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#262626" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
                       <XAxis 
                         dataKey="month" 
                         axisLine={false} 
                         tickLine={false} 
-                        tick={{ fontSize: 9, fill: '#404040', fontWeight: 700 }}
+                        tick={{ fontSize: 9, fill: '#525252', fontWeight: 800 }}
                         dy={10}
                       />
                       <YAxis hide />
                       <Tooltip 
-                        contentStyle={{ backgroundColor: '#1A1A1A', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px' }}
-                        itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
+                        contentStyle={{ 
+                          backgroundColor: 'rgba(10, 10, 11, 0.9)', 
+                          border: '1px solid rgba(245, 158, 11, 0.2)', 
+                          borderRadius: '1.5rem',
+                          backdropFilter: 'blur(10px)',
+                          boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)'
+                        }}
+                        itemStyle={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                        labelStyle={{ color: '#f59e0b', fontWeight: '900', marginBottom: '8px', fontSize: '10px' }}
                       />
                       <Area 
                         type="monotone" 
                         dataKey="receitas" 
                         name="Receitas"
-                        stroke="#10b981" 
-                        strokeWidth={3}
+                        stroke="#f59e0b" 
+                        strokeWidth={4}
                         fillOpacity={1} 
-                        fill="url(#colorReceitas)" 
-                        animationDuration={1200}
+                        fill="url(#colorReceitasFin)" 
+                        animationDuration={1500}
                       />
                       <Area 
                         type="monotone" 
                         dataKey="despesas" 
                         name="Despesas"
                         stroke="#f43f5e" 
-                        strokeWidth={3}
+                        strokeWidth={4}
                         fillOpacity={1} 
-                        fill="url(#colorDespesas)" 
-                        animationDuration={1200}
+                        fill="url(#colorDespesasFin)" 
+                        animationDuration={1500}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -1981,14 +2121,16 @@ export default function App() {
               </section>
 
               {/* Transaction Filters */}
-              <div className="bg-[#141414] p-1 rounded-2xl border border-white/[0.05] flex gap-1">
+              <div className="glass-card p-1.5 rounded-[1.8rem] flex gap-1 bg-white/[0.01]">
                 {(['todos', 'receitas', 'despesas'] as const).map((f) => (
                   <button
                     key={f}
                     onClick={() => setFinanceFilter(f)}
                     className={cn(
-                      "flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                      financeFilter === f ? "bg-emerald-500 text-[#0D0D0D]" : "text-neutral-500 hover:text-neutral-300"
+                      "flex-1 py-3.5 rounded-[1.4rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500",
+                      financeFilter === f 
+                        ? "bg-amber-500 text-black shadow-[0_5px_15px_rgba(245,158,11,0.2)]" 
+                        : "text-neutral-500 hover:text-neutral-300"
                     )}
                   >
                     {f}
@@ -1997,65 +2139,74 @@ export default function App() {
               </div>
 
               {/* Transactions List */}
-              <div className="space-y-2 pb-10">
-                {filteredTransactions.map((t: any) => (
-                  <div 
+              <div className="space-y-3 pb-24">
+                {filteredTransactions.map((t: any, idx: number) => (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.03 }}
                     key={t.id} 
                     onClick={() => handleEditTransaction(t)}
                     className={cn(
-                      "bg-[#141414] p-4 rounded-2xl border border-white/[0.05] flex items-center justify-between group transition-all cursor-pointer hover:border-white/10",
-                      t.status === 'pending' && "opacity-60 border-dashed"
+                      "glass-card-premium p-5 rounded-[2rem] flex items-center justify-between group transition-all duration-500 cursor-pointer overflow-hidden",
+                      t.status === 'pending' ? "opacity-60 border-dashed border-white/10" : "hover:border-amber-500/30"
                     )}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-5">
                       <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center",
-                        t.type === 'in' ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                        "w-12 h-12 rounded-[1.2rem] flex items-center justify-center transition-all duration-500 group-hover:scale-110",
+                        t.type === 'in' ? "bg-amber-500/10 text-amber-500" : "bg-rose-500/10 text-rose-500"
                       )}>
-                        {t.type === 'in' ? <ArrowUpRight size={18} /> : <ArrowDownRight size={18} />}
+                        {t.type === 'in' ? <ArrowUpRight size={22} className="text-glow-gold" /> : <ArrowDownRight size={22} />}
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-bold text-white mb-0.5">{t.description}</p>
+                        <div className="flex items-center gap-3">
+                          <p className="text-sm font-bold text-white mb-0.5 group-hover:text-amber-50 transition-colors">{t.description}</p>
                           {t.status === 'pending' && (
-                            <span className="text-[7px] font-black bg-white/5 text-neutral-500 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">
+                            <span className="text-[7px] font-black bg-white/5 text-neutral-500 px-2.5 py-1 rounded-full uppercase tracking-widest border border-white/[0.05]">
                               {t.type === 'in' ? 'A Receber' : 'A Pagar'}
                             </span>
                           )}
                         </div>
-                        <p className="text-[9px] text-neutral-500 font-bold uppercase tracking-tight">
-                          {new Date(t.date).toLocaleDateString('pt-BR')}
+                        <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">
+                          {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                       <span className={cn(
-                        "text-xs font-black",
-                        t.type === 'in' ? "text-emerald-500" : "text-rose-500"
+                        "text-sm font-black tracking-tight",
+                        t.type === 'in' ? "text-amber-500 text-glow-gold" : "text-rose-500"
                       )}>
                         {t.type === 'in' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
                       </span>
                       
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         {t.status === 'pending' && (
                           <button 
-                            onClick={() => handleToggleTransactionStatus(t.id)}
-                            className="p-2 text-emerald-500 bg-emerald-500/10 rounded-lg hover:bg-emerald-500/20 transition-all"
-                            title="Marcar como realizado"
+                            onClick={(e) => { e.stopPropagation(); handleToggleTransactionStatus(t.id); }}
+                            className="w-9 h-9 flex items-center justify-center text-amber-500 bg-amber-500/5 rounded-xl hover:bg-amber-500 hover:text-black transition-all border border-amber-500/10"
+                            title="Confirmar"
                           >
-                            <Check size={14} strokeWidth={3} />
+                            <Check size={16} strokeWidth={4} />
                           </button>
                         )}
                         <button 
-                          onClick={() => handleDeleteTransaction(t.id)}
-                          className="p-2 text-neutral-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(t.id); }}
+                          className="w-9 h-9 flex items-center justify-center text-neutral-700 hover:text-rose-500 transition-colors group-hover:opacity-100 opacity-0"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
+                {filteredTransactions.length === 0 && (
+                  <div className="text-center py-24 opacity-20">
+                    <Wallet size={48} className="mx-auto mb-4 text-neutral-500" />
+                    <p className="text-xs font-bold uppercase tracking-[0.3em]">Nenhum lançamento</p>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -2064,37 +2215,37 @@ export default function App() {
 
       <Modal isOpen={isExperimentalModalOpen} onClose={() => { setIsExperimentalModalOpen(false); setEditingExperimental(null); setNewStudentName(''); setNewStudentPhotoUrl(''); }}>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xl font-black tracking-tighter">{editingExperimental ? 'Editar Experimental' : 'Novo Experimental'}</h2>
-          <button onClick={() => { setIsExperimentalModalOpen(false); setEditingExperimental(null); setNewStudentPhotoUrl(''); }} className="text-neutral-500 hover:text-white">
-
-            <X size={20} />
+          <h2 className="text-2xl font-black tracking-tighter uppercase italic">{editingExperimental ? 'Editar' : 'Novo'} <span className="text-amber-500">Experimental</span></h2>
+          <button onClick={() => { setIsExperimentalModalOpen(false); setEditingExperimental(null); setNewStudentPhotoUrl(''); }} className="text-neutral-500 hover:text-white transition-colors">
+            <X size={24} />
           </button>
         </div>
-        <p className="text-[13px] text-neutral-500 mb-8 font-medium">Preencha os dados do aluno experimental.</p>
+        <p className="text-[11px] text-neutral-500 mb-10 font-bold uppercase tracking-widest">Registro de novo interessado</p>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Nome</label>
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Nome Completo</label>
             <input 
               type="text" 
-              placeholder="Nome do aluno" 
+              placeholder="Digite o nome do aluno..." 
               value={newStudentName}
               onChange={(e) => setNewStudentName(e.target.value)}
-              className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
+              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-[1.2rem] py-5 px-6 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white placeholder:text-neutral-700 shadow-inner"
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Foto do Aluno</label>
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 bg-[#0D0D0D] border border-white/[0.08] rounded-2xl flex items-center justify-center overflow-hidden flex-shrink-0">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-4 block">Foto do Aluno</label>
+            <div className="flex items-center gap-6">
+              <div className="w-24 h-24 bg-white/[0.02] border border-white/[0.08] rounded-[2rem] flex items-center justify-center overflow-hidden flex-shrink-0 relative group/photo">
+                <div className="absolute inset-0 bg-amber-500/5 opacity-0 group-hover/photo:opacity-100 transition-opacity" />
                 {newStudentPhotoUrl ? (
                   <img src={newStudentPhotoUrl} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
-                  <Users size={24} className="text-neutral-700" />
+                  <Users size={32} className="text-neutral-700" />
                 )}
               </div>
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 space-y-3">
                 <div className="relative">
                   <input 
                     type="file" 
@@ -2106,73 +2257,69 @@ export default function App() {
                   <label 
                     htmlFor="experimental-photo-upload"
                     className={cn(
-                      "w-full flex items-center justify-center gap-2 bg-[#1A1A1A] border border-white/[0.05] hover:border-white/10 rounded-xl py-3 px-4 text-[10px] font-black uppercase tracking-widest cursor-pointer transition-all",
+                      "w-full flex items-center justify-center gap-3 bg-amber-500/10 border border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-black rounded-xl py-4 px-4 text-[10px] font-black uppercase tracking-widest cursor-pointer transition-all duration-500",
                       isUploading && "opacity-50 cursor-not-allowed"
                     )}
                   >
                     {isUploading ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2 size={16} className="animate-spin" />
                     ) : (
-                      <Upload size={14} />
+                      <Camera size={16} />
                     )}
-                    {isUploading ? 'Carregando...' : 'Escolher Foto'}
+                    {isUploading ? 'Processando...' : 'Carregar Imagem'}
                   </label>
                 </div>
-                <input 
-                  type="url" 
-                  placeholder="Ou cole o link da foto aquí..." 
-                  value={newStudentPhotoUrl}
-                  onChange={(e) => setNewStudentPhotoUrl(e.target.value)}
-                  className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-2 px-3 text-[9px] font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
-                />
+                <div className="relative group/url">
+                  <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within/url:text-amber-500 transition-colors" size={14} />
+                  <input 
+                    type="url" 
+                    placeholder="Ou cole o link da foto..." 
+                    value={newStudentPhotoUrl}
+                    onChange={(e) => setNewStudentPhotoUrl(e.target.value)}
+                    className="w-full bg-white/[0.02] border border-white/[0.05] rounded-xl py-3 pl-11 pr-4 text-[10px] font-bold focus:outline-none focus:border-amber-500/30 transition-all text-white placeholder:text-neutral-800"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Telefone</label>
-            <input 
-              type="text" 
-              placeholder="Ex: 11 99999-9999" 
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Data Aula Experimental</label>
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Telefone</label>
+              <div className="relative group/phone">
+                <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within/phone:text-amber-500 transition-colors" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="(00) 00000-0000" 
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 pl-12 pr-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Data da Aula</label>
               <input 
                 type="date" 
                 value={enrollmentDate}
                 onChange={(e) => setEnrollmentDate(e.target.value)}
-                className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white [color-scheme:dark]"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Data Nascimento</label>
-              <input 
-                type="date" 
-                value={birthDate || ''}
-                onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white [color-scheme:dark]"
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 px-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white [color-scheme:dark]"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 block">Horário Preferencial</label>
-            <div className="grid grid-cols-4 gap-2 pb-2">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-4 block">Selecione o Horário</label>
+            <div className="grid grid-cols-4 gap-2">
               {TIME_SLOTS.map((time) => (
                 <button
                   key={time}
                   onClick={() => setPreferredTime(preferredTime === time ? '' : time)}
                   className={cn(
-                    "px-2 py-2 rounded-xl text-[10px] font-black transition-all border",
+                    "py-3 rounded-xl text-[10px] font-black transition-all border duration-500",
                     preferredTime === time 
-                      ? "bg-emerald-500 text-[#0D0D0D] border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
-                      : "bg-[#1A1A1A] text-neutral-500 border-white/[0.05] hover:border-white/10"
+                      ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_15px_rgba(245,158,11,0.2)]" 
+                      : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:border-amber-500/20"
                   )}
                 >
                   {time}
@@ -2182,17 +2329,17 @@ export default function App() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 block">Modalidade Preferencial</label>
-            <div className="grid grid-cols-2 gap-2 pb-2">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-4 block">Modalidade</label>
+            <div className="grid grid-cols-2 gap-3">
               {MODALITIES.map((mod) => (
                 <button
                   key={mod}
                   onClick={() => setPreferredModality(preferredModality === mod ? '' : mod)}
                   className={cn(
-                    "px-3 py-2 rounded-xl text-[10px] font-black transition-all border uppercase text-left",
+                    "px-4 py-4 rounded-xl text-[10px] font-black transition-all border uppercase text-center duration-500 tracking-widest",
                     preferredModality === mod 
-                      ? "bg-emerald-500 text-[#0D0D0D] border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
-                      : "bg-[#1A1A1A] text-neutral-500 border-white/[0.05] hover:border-white/10"
+                      ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_15px_rgba(245,158,11,0.2)]" 
+                      : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:border-amber-500/20"
                   )}
                 >
                   {mod}
@@ -2201,12 +2348,12 @@ export default function App() {
             </div>
           </div>
 
-          <div className="pt-4">
+          <div className="pt-6">
             <button 
               onClick={handleAddOrUpdateExperimental}
-              className="w-full bg-emerald-500 text-[#0D0D0D] py-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400 active:scale-95 transition-all"
+              className="w-full bg-amber-500 text-black py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.3em] shadow-[0_10px_30px_rgba(245,158,11,0.3)] hover:bg-amber-400 active:scale-95 transition-all duration-500"
             >
-              {editingExperimental ? 'Salvar Alterações' : 'Adicionar'}
+              {editingExperimental ? 'Salvar Edição' : 'Concluir Cadastro'}
             </button>
           </div>
         </div>
@@ -2215,36 +2362,37 @@ export default function App() {
       {/* Modal Aluno */}
       <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingStudent(null); setNewStudentName(''); setNewStudentPhotoUrl(''); }}>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xl font-black tracking-tighter">{editingStudent ? 'Editar Aluno' : 'Novo Aluno'}</h2>
-          <button onClick={() => { setIsModalOpen(false); setEditingStudent(null); setNewStudentPhotoUrl(''); }} className="text-neutral-500 hover:text-white">
-            <X size={20} />
+          <h2 className="text-2xl font-black tracking-tighter uppercase italic">{editingStudent ? 'Editar' : 'Novo'} <span className="text-amber-500">Aluno</span></h2>
+          <button onClick={() => { setIsModalOpen(false); setEditingStudent(null); setNewStudentPhotoUrl(''); }} className="text-neutral-500 hover:text-white transition-colors">
+            <X size={24} />
           </button>
         </div>
-        <p className="text-[13px] text-neutral-500 mb-8 font-medium">Preencha os dados do aluno.</p>
+        <p className="text-[11px] text-neutral-500 mb-10 font-bold uppercase tracking-widest">Cadastro oficial de membro</p>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Nome</label>
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Nome Completo</label>
             <input 
               type="text" 
-              placeholder="Nome do aluno" 
+              placeholder="Digite o nome completo do aluno..." 
               value={newStudentName}
               onChange={(e) => setNewStudentName(e.target.value)}
-              className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
+              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-[1.2rem] py-5 px-6 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white placeholder:text-neutral-700 shadow-inner"
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Foto do Aluno</label>
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 bg-[#0D0D0D] border border-white/[0.08] rounded-2xl flex items-center justify-center overflow-hidden flex-shrink-0">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-4 block">Foto do Aluno</label>
+            <div className="flex items-center gap-6">
+              <div className="w-24 h-24 bg-white/[0.02] border border-white/[0.08] rounded-[2rem] flex items-center justify-center overflow-hidden flex-shrink-0 relative group/photo">
+                <div className="absolute inset-0 bg-amber-500/5 opacity-0 group-hover/photo:opacity-100 transition-opacity" />
                 {newStudentPhotoUrl ? (
                   <img src={newStudentPhotoUrl} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
-                  <Users size={24} className="text-neutral-700" />
+                  <Users size={32} className="text-neutral-700" />
                 )}
               </div>
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 space-y-3">
                 <div className="relative">
                   <input 
                     type="file" 
@@ -2256,104 +2404,103 @@ export default function App() {
                   <label 
                     htmlFor="student-photo-upload"
                     className={cn(
-                      "w-full flex items-center justify-center gap-2 bg-[#1A1A1A] border border-white/[0.05] hover:border-white/10 rounded-xl py-3 px-4 text-[10px] font-black uppercase tracking-widest cursor-pointer transition-all",
+                      "w-full flex items-center justify-center gap-3 bg-amber-500/10 border border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-black rounded-xl py-4 px-4 text-[10px] font-black uppercase tracking-widest cursor-pointer transition-all duration-500",
                       isUploading && "opacity-50 cursor-not-allowed"
                     )}
                   >
                     {isUploading ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2 size={16} className="animate-spin" />
                     ) : (
-                      <Upload size={14} />
+                      <Camera size={16} />
                     )}
-                    {isUploading ? 'Carregando...' : 'Escolher Foto'}
+                    {isUploading ? 'Processando...' : 'Carregar Imagem'}
                   </label>
                 </div>
+                <div className="relative group/url">
+                  <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within/url:text-amber-500 transition-colors" size={14} />
+                  <input 
+                    type="url" 
+                    placeholder="Ou cole o link da foto..." 
+                    value={newStudentPhotoUrl}
+                    onChange={(e) => setNewStudentPhotoUrl(e.target.value)}
+                    className="w-full bg-white/[0.02] border border-white/[0.05] rounded-xl py-3 pl-11 pr-4 text-[10px] font-bold focus:outline-none focus:border-amber-500/30 transition-all text-white placeholder:text-neutral-800"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Mensalidade (R$)</label>
+              <input 
+                type="number" 
+                placeholder="Ex: 150,00" 
+                value={newStudentValue}
+                onChange={(e) => setNewStudentValue(e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 px-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Telefone</label>
+              <div className="relative group/phone">
+                <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within/phone:text-amber-500 transition-colors" size={16} />
                 <input 
-                  type="url" 
-                  placeholder="Ou cole o link da foto aquí..." 
-                  value={newStudentPhotoUrl}
-                  onChange={(e) => setNewStudentPhotoUrl(e.target.value)}
-                  className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-2 px-3 text-[9px] font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
+                  type="text" 
+                  placeholder="(00) 00000-0000" 
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 pl-12 pr-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white"
                 />
               </div>
             </div>
           </div>
 
-          <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Valor Mensalidade (R$)</label>
-            <input 
-              type="number" 
-              placeholder="Ex: 150,00" 
-              value={newStudentValue}
-              onChange={(e) => setNewStudentValue(e.target.value)}
-              className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
-            />
-          </div>
-
-          <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Telefone</label>
-            <input 
-              type="text" 
-              placeholder="Ex: 11 99999-9999" 
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Data Matrícula</label>
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Data Matrícula</label>
               <input 
                 type="date" 
                 value={enrollmentDate}
                 onChange={(e) => setEnrollmentDate(e.target.value)}
-                className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white [color-scheme:dark]"
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 px-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white [color-scheme:dark]"
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Data Nascimento</label>
-              <input 
-                type="date" 
-                value={birthDate || ''}
-                onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white [color-scheme:dark]"
-              />
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Vencimento</label>
+              <div className="grid grid-cols-6 gap-2">
+                {['05', '10', '15', '20', '25', '30'].map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => setPreferredDueDay(day)}
+                    className={cn(
+                      "py-3 rounded-lg text-[9px] font-black transition-all border duration-500",
+                      preferredDueDay === day 
+                        ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_10px_rgba(245,158,11,0.2)]" 
+                        : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:border-amber-500/20"
+                    )}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 block">Dia de Vencimento Preferencial</label>
-            <div className="grid grid-cols-6 gap-2">
-              {['05', '10', '15', '20', '25', '30'].map((day) => (
-                <button
-                  key={day}
-                  onClick={() => setPreferredDueDay(day)}
-                  className={cn(
-                    "py-3 rounded-xl text-[11px] font-bold transition-all border",
-                    preferredDueDay === day 
-                      ? "bg-emerald-500 text-[#0D0D0D] border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
-                      : "bg-[#1A1A1A] text-neutral-500 border-white/[0.05] hover:border-white/10"
-                  )}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 block">Plano</label>
-            <div className="grid grid-cols-2 gap-2">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-4 block">Plano de Treino</label>
+            <div className="grid grid-cols-2 gap-3">
               {PLAN_OPTIONS.map((p) => (
                 <button 
                   key={p}
+                  type="button"
                   onClick={() => setSelectedPlan(p)}
                   className={cn(
-                    "py-3 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all",
+                    "py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all border duration-500",
                     selectedPlan === p 
-                      ? (p === 'Wellhub' ? "bg-rose-500 text-white" : "bg-emerald-500 text-[#0D0D0D]") 
-                      : (p === 'Wellhub' ? "bg-[#1A1A1A] text-rose-500 hover:bg-rose-500/10 border border-rose-500/20" : "bg-[#1A1A1A] text-neutral-500 hover:bg-[#222]")
+                      ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_15px_rgba(245,158,11,0.2)]" 
+                      : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:border-amber-500/20"
                   )}
                 >
                   {p}
@@ -2363,17 +2510,18 @@ export default function App() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 block">Pagamento</label>
-            <div className="grid grid-cols-2 gap-2">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-4 block">Status Financeiro</label>
+            <div className="grid grid-cols-2 gap-3">
               {['Em dia', 'Pendente'].map((st) => (
                 <button 
                   key={st}
+                  type="button"
                   onClick={() => setSelectedPayment(st)}
                   className={cn(
-                    "py-3 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all",
+                    "py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all border duration-500",
                     selectedPayment === st 
-                      ? (st === 'Em dia' ? "bg-emerald-500 text-[#0D0D0D]" : "bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)]") 
-                      : "bg-[#1A1A1A] text-neutral-500 hover:bg-[#222]"
+                      ? (st === 'Em dia' ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_15px_rgba(245,158,11,0.2)]" : "bg-rose-500 text-white border-rose-500 shadow-[0_5px_15px_rgba(244,63,94,0.3)]") 
+                      : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:border-white/10"
                   )}
                 >
                   {st}
@@ -2382,52 +2530,55 @@ export default function App() {
             </div>
           </div>
 
-          <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 block">Horário Preferencial</label>
-            <div className="grid grid-cols-4 gap-2 pb-2">
-              {TIME_SLOTS.map((time) => (
-                <button
-                  key={time}
-                  onClick={() => setPreferredTime(preferredTime === time ? '' : time)}
-                  className={cn(
-                    "px-2 py-2 rounded-xl text-[10px] font-black transition-all border",
-                    preferredTime === time 
-                      ? "bg-emerald-500 text-[#0D0D0D] border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
-                      : "bg-[#1A1A1A] text-neutral-500 border-white/[0.05] hover:border-white/10"
-                  )}
-                >
-                  {time}
-                </button>
-              ))}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-4 block">Horário</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['06:00', '07:00', '08:00', '09:00', '17:00', '18:00', '19:00', '20:00'].map((time) => (
+                  <button
+                    key={time}
+                    type="button"
+                    onClick={() => setPreferredTime(preferredTime === time ? '' : time)}
+                    className={cn(
+                      "py-2.5 rounded-lg text-[9px] font-black transition-all border duration-500",
+                      preferredTime === time 
+                        ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_10px_rgba(245,158,11,0.2)]" 
+                        : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:border-amber-500/20"
+                    )}
+                  >
+                    {time}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-4 block">Modalidade</label>
+              <div className="space-y-2">
+                {MODALITIES.slice(0, 4).map((mod) => (
+                  <button
+                    key={mod}
+                    type="button"
+                    onClick={() => setPreferredModality(preferredModality === mod ? '' : mod)}
+                    className={cn(
+                      "w-full py-2.5 rounded-lg text-[9px] font-black transition-all border uppercase duration-500",
+                      preferredModality === mod 
+                        ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_10px_rgba(245,158,11,0.2)]" 
+                        : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:border-amber-500/20"
+                    )}
+                  >
+                    {mod}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 block">Modalidade Preferencial</label>
-            <div className="grid grid-cols-2 gap-2 pb-2">
-              {MODALITIES.map((mod) => (
-                <button
-                  key={mod}
-                  onClick={() => setPreferredModality(preferredModality === mod ? '' : mod)}
-                  className={cn(
-                    "px-3 py-2 rounded-xl text-[10px] font-black transition-all border uppercase text-left",
-                    preferredModality === mod 
-                      ? "bg-emerald-500 text-[#0D0D0D] border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
-                      : "bg-[#1A1A1A] text-neutral-500 border-white/[0.05] hover:border-white/10"
-                  )}
-                >
-                  {mod}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="pt-4">
+          <div className="pt-6">
             <button 
               onClick={handleAddOrUpdateStudent}
-              className="w-full bg-emerald-500 text-[#0D0D0D] py-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400 active:scale-95 transition-all"
+              className="w-full bg-amber-500 text-black py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.3em] shadow-[0_10px_30px_rgba(245,158,11,0.3)] hover:bg-amber-400 active:scale-95 transition-all duration-500"
             >
-              {editingStudent ? 'Salvar Alterações' : 'Adicionar'}
+              {editingStudent ? 'Atualizar Membro' : 'Concluir Registro'}
             </button>
           </div>
         </div>
@@ -2436,17 +2587,17 @@ export default function App() {
       {/* Modal Agenda (Gerenciar Horário) */}
       <Modal isOpen={isAgendaModalOpen} onClose={() => { setIsAgendaModalOpen(false); setSelectedBookingModality(''); setBookingSearchTerm(''); }}>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xl font-black tracking-tighter uppercase">Gerenciar Horário</h2>
-          <button onClick={() => { setIsAgendaModalOpen(false); setSelectedBookingModality(''); }} className="text-neutral-500 hover:text-white">
-            <X size={20} />
+          <h2 className="text-2xl font-black tracking-tighter uppercase italic">Gerenciar <span className="text-amber-500">Horário</span></h2>
+          <button onClick={() => { setIsAgendaModalOpen(false); setSelectedBookingModality(''); }} className="text-neutral-500 hover:text-white transition-colors">
+            <X size={24} />
           </button>
         </div>
-        <p className="text-[13px] text-neutral-500 mb-6 font-medium tracking-tight">Selecione o horário e as modalidades desejadas.</p>
+        <p className="text-[11px] text-neutral-500 mb-8 font-bold uppercase tracking-widest">Controle de ocupação e modalidades</p>
 
         {/* Time Selection inside Modal */}
-        <div className="mb-8">
-          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 block">Horário da Aula</label>
-          <div className="grid grid-cols-4 gap-2 pb-2">
+        <div className="mb-8 p-6 glass-card rounded-[2rem]">
+          <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-4 block">Horário da Aula</label>
+          <div className="grid grid-cols-4 gap-2">
             {TIME_SLOTS.map((time) => (
               <button
                 key={time}
@@ -2455,10 +2606,10 @@ export default function App() {
                   setSelectedBookingModality(''); // Reset modality selection when time changes
                 }}
                 className={cn(
-                  "px-2 py-2 rounded-xl text-[10px] font-black transition-all border",
+                  "py-3 rounded-xl text-[10px] font-black transition-all border duration-500",
                   selectedTimeSlot === time 
-                    ? "bg-emerald-500 text-[#0D0D0D] border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
-                    : "bg-[#1A1A1A] text-neutral-500 border-white/[0.05] hover:border-white/10"
+                    ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_15px_rgba(245,158,11,0.2)]" 
+                    : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:border-amber-500/20"
                 )}
               >
                 {time}
@@ -2468,7 +2619,7 @@ export default function App() {
         </div>
 
         {/* Modality Selection */}
-        <div className="grid grid-cols-2 gap-2 mb-8">
+        <div className="grid grid-cols-2 gap-3 mb-10">
           {MODALITIES.map((mod) => {
             const key = `${selectedAgendaDate}-${selectedTimeSlot}`;
             const isActive = (agendaEvents[key]?.modalities || []).find(m => m.modality === mod);
@@ -2478,13 +2629,13 @@ export default function App() {
                 key={mod}
                 onClick={() => handleToggleModality(selectedTimeSlot, mod)}
                 className={cn(
-                  "py-3 px-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-center leading-tight flex items-center justify-center gap-2",
+                  "py-4 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 text-center leading-tight flex items-center justify-center gap-2 border",
                   isActive 
-                    ? "bg-emerald-500 text-[#0D0D0D] shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
-                    : "bg-[#1A1A1A] text-neutral-500 hover:bg-[#222] border border-white/[0.02]"
+                    ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_15px_rgba(245,158,11,0.2)]" 
+                    : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:border-amber-500/20"
                 )}
               >
-                {isActive && <Check size={12} strokeWidth={4} />}
+                {isActive && <Check size={14} strokeWidth={4} />}
                 {mod}
               </button>
             );
@@ -2498,23 +2649,23 @@ export default function App() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="space-y-6"
+              className="space-y-8"
             >
               <div className="h-px bg-white/[0.05] w-full" />
               
               {/* Select Modality to Add Students */}
               <div className="space-y-4">
-                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block">Incluir Aluno em:</label>
+                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest block">Incluir Aluno em:</label>
                 <div className="flex flex-wrap gap-2">
                   {(agendaEvents[`${selectedAgendaDate}-${selectedTimeSlot}`]?.modalities || []).map(m => (
                     <button
                       key={m.modality}
                       onClick={() => setSelectedBookingModality(m.modality)}
                       className={cn(
-                        "px-3 py-1.5 rounded-lg text-[9px] font-bold transition-all",
+                        "px-4 py-2 rounded-xl text-[10px] font-black transition-all duration-500 uppercase tracking-widest",
                         selectedBookingModality === m.modality 
-                          ? "bg-emerald-500 text-[#0D0D0D]" 
-                          : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                          ? "bg-amber-500 text-black shadow-[0_5px_15px_rgba(245,158,11,0.2)]" 
+                          : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
                       )}
                     >
                       {m.modality}
@@ -2524,41 +2675,41 @@ export default function App() {
               </div>
 
               {selectedBookingModality && (
-                <div className="space-y-4 animate-in fade-in duration-300">
+                <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-500">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Nome do Aluno</label>
+                    <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Nome do Aluno</label>
                     <button 
                       onClick={() => setIsExperimental(!isExperimental)}
                       className={cn(
-                        "flex items-center gap-1.5 px-2 py-1 rounded-md text-[9px] font-black transition-colors",
-                        isExperimental ? "bg-amber-500 text-[#0D0D0D]" : "bg-neutral-800 text-neutral-500"
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-black transition-all border duration-500 uppercase tracking-widest",
+                        isExperimental ? "bg-amber-500 text-black border-amber-500" : "bg-neutral-900 text-neutral-500 border-white/5"
                       )}
                     >
-                      <Zap size={10} className={isExperimental ? "fill-[#0D0D0D]" : ""} />
+                      <Zap size={10} className={isExperimental ? "fill-black" : ""} />
                       EXPERIMENTAL
                     </button>
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <div className="relative flex-1">
                       <input 
                         type="text"
                         placeholder={isExperimental ? "Nome do aluno experimental..." : "Buscar aluno regular..."}
                         value={bookingSearchTerm}
                         onChange={(e) => setBookingSearchTerm(e.target.value)}
-                        className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-3 px-4 text-xs font-medium focus:outline-none focus:border-emerald-500/50 text-white"
+                        className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 px-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 text-white placeholder:text-neutral-700"
                       />
                       
                       {/* Quick Suggestions for Regular Students */}
                       {!isExperimental && bookingSearchTerm.length > 1 && (
-                        <div className="absolute left-0 right-0 top-full mt-1 bg-[#1A1A1A] border border-white/[0.08] rounded-xl shadow-2xl z-10 overflow-hidden">
+                        <div className="absolute left-0 right-0 top-full mt-2 bg-[#0a0a0b] border border-white/[0.1] rounded-[1.5rem] shadow-2xl z-[60] overflow-hidden backdrop-blur-3xl">
                           {students
                             .filter(s => s.name.toLowerCase().includes(bookingSearchTerm.toLowerCase()))
                             .map(s => (
                               <button
                                 key={s.id}
                                 onClick={() => handleAddBooking(s.name, false)}
-                                className="w-full text-left px-4 py-2 text-xs hover:bg-emerald-500 hover:text-[#0D0D0D] transition-colors"
+                                className="w-full text-left px-5 py-3.5 text-xs font-bold hover:bg-amber-500 hover:text-black transition-all border-b border-white/[0.03] last:border-0"
                               >
                                 {s.name}
                               </button>
@@ -2570,46 +2721,46 @@ export default function App() {
                     <button 
                       onClick={() => handleAddBooking(bookingSearchTerm, isExperimental)}
                       disabled={!bookingSearchTerm.trim()}
-                      className="bg-emerald-500 text-[#0D0D0D] px-4 rounded-xl font-black text-xs uppercase disabled:opacity-50"
+                      className="bg-amber-500 text-black px-6 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-30 transition-all hover:bg-amber-400"
                     >
-                      OK
+                      ADICIONAR
                     </button>
                   </div>
                 </div>
               )}
 
               {/* List Bookings per Modality */}
-              <div className="space-y-4 pt-2">
+              <div className="space-y-6 pt-2 pb-10">
                 {(agendaEvents[`${selectedAgendaDate}-${selectedTimeSlot}`]?.modalities || []).map(m => (
-                  <div key={m.modality} className="space-y-2">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[10px] font-black text-emerald-500 tracking-tighter uppercase">{m.modality} ({m.bookings.length})</span>
+                  <div key={m.modality} className="space-y-3">
+                    <div className="flex items-center justify-between px-2">
+                      <span className="text-[11px] font-black text-amber-500 tracking-[0.2em] uppercase text-glow-gold">{m.modality} ({m.bookings.length})</span>
                     </div>
-                    <div className="grid grid-cols-1 gap-1.5">
+                    <div className="grid grid-cols-1 gap-2">
                       {m.bookings.map(b => (
-                        <div key={b.id} className="flex items-center justify-between bg-[#0D0D0D]/50 border border-white/[0.02] p-3 rounded-xl group">
-                          <div className="flex items-center gap-3">
-                            <div className={cn("w-6 h-6 rounded-full flex items-center justify-center", b.isExperimental ? "bg-amber-500/10 text-amber-500" : "bg-neutral-800 text-neutral-500")}>
-                              {b.isExperimental ? <Zap size={12} className="fill-amber-500" /> : <User size={12} />}
+                        <div key={b.id} className="flex items-center justify-between bg-white/[0.02] border border-white/[0.05] p-5 rounded-[1.5rem] group hover:border-amber-500/20 transition-all duration-500">
+                          <div className="flex items-center gap-4">
+                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110", b.isExperimental ? "bg-amber-500/10 text-amber-500" : "bg-neutral-800/10 text-neutral-500")}>
+                              {b.isExperimental ? <Zap size={18} className="fill-amber-500 text-glow-gold" /> : <User size={18} />}
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-xs font-bold text-neutral-300">{b.studentName}</span>
+                              <span className="text-sm font-bold text-neutral-300 group-hover:text-white transition-colors">{b.studentName}</span>
                               {b.isExperimental && (
-                                <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest mt-0.5">EXPERIMENTAL</span>
+                                <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest mt-0.5 text-glow-gold">EXPERIMENTAL</span>
                               )}
                             </div>
                           </div>
                           <button 
                             onClick={() => handleRemoveBooking(m.modality, b.id)}
-                            className="text-neutral-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                            className="w-10 h-10 flex items-center justify-center text-neutral-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={18} />
                           </button>
                         </div>
                       ))}
                       {m.bookings.length === 0 && (
-                        <div className="text-[10px] text-neutral-700 font-bold uppercase py-2 text-center border border-dashed border-white/[0.03] rounded-xl">
-                          Nenhum agendamento
+                        <div className="text-[10px] text-neutral-700 font-bold uppercase py-10 text-center border border-dashed border-white/[0.05] rounded-[2rem]">
+                          Vazio
                         </div>
                       )}
                     </div>
@@ -2620,10 +2771,10 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        <div className="pt-8 mt-auto">
+        <div className="pt-8 mt-auto sticky bottom-0 bg-[#0a0a0b]">
           <button 
             onClick={() => { setIsAgendaModalOpen(false); setSelectedBookingModality(''); }}
-            className="w-full bg-white text-[#0D0D0D] py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-neutral-200 active:scale-95 transition-all shadow-xl"
+            className="w-full bg-white text-black py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.3em] hover:bg-neutral-200 active:scale-95 transition-all shadow-[0_10px_30px_rgba(255,255,255,0.1)]"
           >
             Concluído
           </button>
@@ -2633,33 +2784,31 @@ export default function App() {
       {/* Modal Financeiro (Novo Lançamento) */}
       <Modal isOpen={isFinanceModalOpen} onClose={() => { setIsFinanceModalOpen(false); setNewTransDesc(''); setNewTransValue(''); setEditingTransaction(null); }}>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xl font-black tracking-tighter uppercase">{editingTransaction ? 'Editar Lançamento' : 'Novo Lançamento'}</h2>
-          <button onClick={() => { setIsFinanceModalOpen(false); setEditingTransaction(null); }} className="text-neutral-500 hover:text-white">
-            <X size={20} />
+          <h2 className="text-2xl font-black tracking-tighter uppercase italic">{editingTransaction ? 'Editar' : 'Novo'} <span className="text-amber-500">Lançamento</span></h2>
+          <button onClick={() => { setIsFinanceModalOpen(false); setEditingTransaction(null); }} className="text-neutral-500 hover:text-white transition-colors">
+            <X size={24} />
           </button>
         </div>
-        <p className="text-[13px] text-neutral-500 mb-8 font-medium tracking-tight">
-          {editingTransaction ? 'Atualize os dados da transação.' : 'Adicione uma receita ou despesa.'}
-        </p>
+        <p className="text-[11px] text-neutral-500 mb-10 font-bold uppercase tracking-widest">Fluxo de caixa e controle diário</p>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 block">Data</label>
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Data da Operação</label>
             <input 
               type="date" 
               value={newTransDate}
               onChange={(e) => setNewTransDate(e.target.value)}
-              className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white [color-scheme:dark]"
+              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 px-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white [color-scheme:dark]"
             />
           </div>
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 block">Tipo</label>
-            <div className="grid grid-cols-2 gap-2">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-4 block">Tipo de Movimentação</label>
+            <div className="grid grid-cols-2 gap-3">
               <button 
                 onClick={() => setNewTransType('in')}
                 className={cn(
-                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
-                  newTransType === 'in' ? "bg-emerald-500 text-[#0D0D0D] shadow-[0_0_20px_rgba(16,185,129,0.3)]" : "text-neutral-600"
+                  "py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 border",
+                  newTransType === 'in' ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_15px_rgba(245,158,11,0.2)]" : "bg-white/[0.02] text-neutral-600 border-white/[0.05]"
                 )}
               >
                 Receita
@@ -2667,8 +2816,8 @@ export default function App() {
               <button 
                 onClick={() => setNewTransType('out')}
                 className={cn(
-                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
-                  newTransType === 'out' ? "bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)]" : "text-neutral-600"
+                  "py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 border",
+                  newTransType === 'out' ? "bg-rose-500 text-white border-rose-500 shadow-[0_5px_15px_rgba(244,63,94,0.3)]" : "bg-white/[0.02] text-neutral-600 border-white/[0.05]"
                 )}
               >
                 Despesa
@@ -2677,13 +2826,13 @@ export default function App() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 block">Status</label>
-            <div className="grid grid-cols-2 gap-2">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-4 block">Status do Pagamento</label>
+            <div className="grid grid-cols-2 gap-3">
               <button 
                 onClick={() => setNewTransStatus('pending')}
                 className={cn(
-                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
-                  newTransStatus === 'pending' ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" : "text-neutral-600"
+                  "py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 border",
+                  newTransStatus === 'pending' ? "bg-amber-500/10 text-amber-500 border-amber-500/30" : "bg-white/[0.02] text-neutral-600 border-white/[0.05]"
                 )}
               >
                 {newTransType === 'in' ? 'A Receber' : 'A Pagar'}
@@ -2691,8 +2840,8 @@ export default function App() {
               <button 
                 onClick={() => setNewTransStatus('completed')}
                 className={cn(
-                  "py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
-                  newTransStatus === 'completed' ? "bg-emerald-500 text-[#0D0D0D] shadow-[0_0_15px_rgba(16,185,129,0.3)]" : "text-neutral-600"
+                  "py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 border",
+                  newTransStatus === 'completed' ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_15px_rgba(245,158,11,0.2)]" : "bg-white/[0.02] text-neutral-600 border-white/[0.05]"
                 )}
               >
                 {newTransType === 'in' ? 'Recebido' : 'Pago'}
@@ -2701,58 +2850,62 @@ export default function App() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Descrição</label>
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Descrição</label>
             <input 
               type="text" 
-              placeholder="Ex: Mensalidade, Aluguel..." 
+              placeholder="Ex: Mensalidade, Aluguel, Equipamento..." 
               value={newTransDesc}
               onChange={(e) => setNewTransDesc(e.target.value)}
-              className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
+              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 px-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white placeholder:text-neutral-700"
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Valor (R$)</label>
-            <input 
-              type="number" 
-              placeholder="0,00" 
-              value={newTransValue}
-              onChange={(e) => setNewTransValue(e.target.value)}
-              className="w-full bg-[#0D0D0D] border border-white/[0.08] rounded-xl py-4 px-4 text-sm font-medium focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
-            />
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Valor Líquido (R$)</label>
+            <div className="relative group/value">
+              <div className="absolute left-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-amber-500/50">R$</div>
+              <input 
+                type="number" 
+                placeholder="0,00" 
+                value={newTransValue}
+                onChange={(e) => setNewTransValue(e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 pl-12 pr-5 text-xl font-black focus:outline-none focus:border-amber-500/50 transition-all text-amber-500 placeholder:text-neutral-700"
+              />
+            </div>
           </div>
 
-          <div className="pt-4">
+          <div className="pt-6">
             <button 
               onClick={handleAddTransaction}
-              className="w-full bg-emerald-500 text-[#0D0D0D] py-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:bg-emerald-400 active:scale-95 transition-all"
+              className="w-full bg-amber-500 text-black py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.3em] shadow-[0_10px_30px_rgba(245,158,11,0.3)] hover:bg-amber-400 active:scale-95 transition-all duration-500"
             >
-              {editingTransaction ? 'Salvar Alterações' : 'Adicionar Lançamento'}
+              {editingTransaction ? 'Salvar Alterações' : 'Concluir Lançamento'}
             </button>
           </div>
         </div>
       </Modal>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#0D0D0D]/80 backdrop-blur-xl border-t border-white/[0.05] px-6 py-4 flex items-center justify-around z-[100]">
+      {/* Bottom Navigation (Mobile Only) */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0b]/60 backdrop-blur-3xl border-t border-white/[0.05] px-8 py-5 flex lg:hidden items-center justify-around z-[100] safe-area-bottom">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
         <NavItem 
           id="home" 
           icon={LayoutDashboard} 
-          label="Home" 
+          label="Início" 
           active={view === 'home'} 
           onClick={() => setView('home')} 
         />
         <NavItem 
           id="alunos" 
           icon={Users} 
-          label="Alunos" 
+          label="Membros" 
           active={view === 'alunos'} 
           onClick={() => setView('alunos')} 
         />
         <NavItem 
           id="experimentais" 
           icon={Zap} 
-          label="Exps" 
+          label="Aulas" 
           active={view === 'experimentais'} 
           onClick={() => setView('experimentais')} 
         />
@@ -2766,11 +2919,12 @@ export default function App() {
         <NavItem 
           id="financeiro" 
           icon={Wallet} 
-          label="Financeiro" 
+          label="Caixa" 
           active={view === 'financeiro'} 
           onClick={() => setView('financeiro')} 
         />
       </nav>
+      </div>
     </div>
   );
 }
