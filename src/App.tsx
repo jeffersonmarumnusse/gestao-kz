@@ -38,7 +38,8 @@ import {
   Loader2,
   Camera,
   Link2,
-  Phone
+  Phone,
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -245,7 +246,13 @@ const ActionButton = ({ label, icon: Icon, primary = false, onClick }: { label: 
 );
 
 export default function App() {
-  const [view, setView] = useState<'home' | 'alunos' | 'experimentais' | 'agenda' | 'financeiro'>('home');
+  const [session, setSession] = useState<any>(null);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [isAuthInit, setIsAuthInit] = useState(false);
+  
+  const [view, setView] = useState<'home' | 'alunos' | 'experimentais' | 'agenda' | 'financeiro' | 'public_agenda' | 'login'>('home');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExperimentalModalOpen, setIsExperimentalModalOpen] = useState(false);
   const [dashboardPlanFilter, setDashboardPlanFilter] = useState('Todos');
@@ -256,6 +263,51 @@ export default function App() {
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [editingExperimental, setEditingExperimental] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsAuthInit(true);
+      if (!session) {
+        setView('public_agenda');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session) {
+        setView('public_agenda');
+      } else if (view === 'public_agenda' || view === 'login') {
+        setView('home');
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+
+    // Bypass provisório para desenvolvimento/testes
+    if (authPassword === '1234') {
+      setSession({ user: { email: authEmail || 'admin@gestaokz.com' } } as any);
+      setView('home');
+      setAuthLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: authEmail,
+      password: authPassword,
+    });
+    if (error) alert('Erro de login: ' + error.message);
+    setAuthLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1161,49 +1213,147 @@ export default function App() {
       <BackgroundBlobs />
       
       {/* Desktop Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-24 hidden lg:flex flex-col items-center py-10 glass-card border-r border-white/[0.05] z-50 rounded-none">
-        <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)] mb-12">
-          <Dumbbell size={24} className="text-black" strokeWidth={2.5} />
-        </div>
-        
-        <nav className="flex flex-col gap-8 w-full px-4">
-          <NavItem id="home" icon={LayoutDashboard} label="Home" active={view === 'home'} onClick={() => setView('home')} />
-          <NavItem id="alunos" icon={Users} label="Alunos" active={view === 'alunos'} onClick={() => setView('alunos')} />
-          <NavItem id="experimentais" icon={Zap} label="Leads" active={view === 'experimentais'} onClick={() => setView('experimentais')} />
-          <NavItem id="agenda" icon={CalendarDays} label="Agenda" active={view === 'agenda'} onClick={() => setView('agenda')} />
-          <NavItem id="financeiro" icon={Wallet} label="Caixa" active={view === 'financeiro'} onClick={() => setView('financeiro')} />
-        </nav>
-      </aside>
+      {session && view !== 'public_agenda' && view !== 'login' && (
+        <aside className="fixed left-0 top-0 h-full w-24 hidden lg:flex flex-col items-center py-10 glass-card border-r border-white/[0.05] z-50 rounded-none">
+          <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.3)] mb-12">
+            <Dumbbell size={24} className="text-black" strokeWidth={2.5} />
+          </div>
+          
+          <nav className="flex flex-col gap-8 w-full px-4">
+            <NavItem id="home" icon={LayoutDashboard} label="Home" active={view === 'home'} onClick={() => setView('home')} />
+            <NavItem id="alunos" icon={Users} label="Alunos" active={view === 'alunos'} onClick={() => setView('alunos')} />
+            <NavItem id="experimentais" icon={Zap} label="Leads" active={view === 'experimentais'} onClick={() => setView('experimentais')} />
+            <NavItem id="agenda" icon={CalendarDays} label="Agenda" active={view === 'agenda'} onClick={() => setView('agenda')} />
+            <NavItem id="financeiro" icon={Wallet} label="Caixa" active={view === 'financeiro'} onClick={() => setView('financeiro')} />
+            <div className="mt-4 pt-6 border-t border-white/10 w-full flex justify-center">
+              <button onClick={handleLogout} className="text-neutral-500 hover:text-rose-500 transition-colors p-3 rounded-xl hover:bg-rose-500/10">
+                <LogOut size={20} />
+              </button>
+            </div>
+          </nav>
+        </aside>
+      )}
 
       {/* Main Content Area */}
-      <div className="lg:pl-24 relative z-10 w-full">
+      <div className={cn("relative z-10 w-full", session && view !== 'public_agenda' && view !== 'login' ? "lg:pl-24" : "")}>
         {/* Top Header */}
-        <header className="border-b border-white/[0.03] backdrop-blur-md sticky top-0 z-[40]">
-          <div className="px-4 lg:px-12 py-8 flex items-center justify-between max-w-7xl mx-auto w-full">
-            <div className="flex items-center gap-4">
-              <div className="lg:hidden w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.3)]">
-                <Dumbbell size={20} className="text-black" strokeWidth={2.5} />
+        {session && view !== 'public_agenda' && view !== 'login' && (
+          <header className="border-b border-white/[0.03] backdrop-blur-md sticky top-0 z-[40]">
+            <div className="px-4 lg:px-12 py-8 flex items-center justify-between max-w-7xl mx-auto w-full">
+              <div className="flex items-center gap-4">
+                <div className="lg:hidden w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+                  <Dumbbell size={20} className="text-black" strokeWidth={2.5} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.3em] mb-0.5">Gestão Fitness</p>
+                  <h1 className="text-2xl font-black tracking-tighter text-white uppercase italic">K<span className="text-amber-500">Z</span></h1>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.3em] mb-0.5">Gestão Fitness</p>
-                <h1 className="text-2xl font-black tracking-tighter text-white uppercase italic">K<span className="text-amber-500">Z</span></h1>
+              <div className="flex items-center gap-4">
+                <button className="p-3 glass-card rounded-2xl text-neutral-400 hover:text-amber-500 transition-all group lg:hidden">
+                  <Menu size={20} className="group-hover:scale-110 transition-transform" />
+                </button>
+                <div className="hidden sm:flex items-center gap-2 px-4 py-2 glass-card rounded-full text-[11px] font-bold text-amber-500/80 uppercase tracking-widest border border-amber-500/20">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                  Sistema Ativo
+                </div>
+                <button onClick={handleLogout} className="p-3 glass-card rounded-2xl text-neutral-400 hover:text-rose-500 transition-all group lg:hidden ml-2 border border-white/5">
+                  <LogOut size={16} />
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <button className="p-3 glass-card rounded-2xl text-neutral-400 hover:text-amber-500 transition-all group lg:hidden">
-                <Menu size={20} className="group-hover:scale-110 transition-transform" />
-              </button>
-              <div className="hidden sm:flex items-center gap-2 px-4 py-2 glass-card rounded-full text-[11px] font-bold text-amber-500/80 uppercase tracking-widest border border-amber-500/20">
-                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-                Sistema Ativo
-              </div>
-            </div>
-          </div>
-        </header>
+          </header>
+        )}
 
-        <main className="px-4 py-8 lg:px-12 max-w-7xl mx-auto">
+        <main className={cn(
+          "px-4 py-8 mx-auto w-full", 
+          session && view !== 'public_agenda' && view !== 'login' 
+            ? "lg:px-12 max-w-7xl" 
+            : (view === 'agenda' ? "max-w-3xl" : "max-w-xl flex-1 flex flex-col justify-center min-h-[80vh]")
+        )}>
 
         <AnimatePresence mode="wait">
+          {view === 'login' && (
+            <motion.div 
+              key="login"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="w-full max-w-sm mx-auto flex flex-col items-center justify-center mt-10"
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-600 rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)] mb-8">
+                <Dumbbell size={32} className="text-black" strokeWidth={2.5} />
+              </div>
+              <h2 className="text-3xl font-black tracking-tighter text-white uppercase italic mb-8">Gestão <span className="text-amber-500">KZ</span></h2>
+              <form onSubmit={handleLogin} className="w-full glass-card-premium p-8 rounded-[2rem] space-y-6">
+                <div>
+                  <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-3 block">Email</label>
+                  <input 
+                    type="email" 
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-3 px-4 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white placeholder:text-neutral-700" 
+                    placeholder="email@gestaokz.com"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-3 block">Senha</label>
+                  <input 
+                    type="password" 
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-3 px-4 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white placeholder:text-neutral-700" 
+                    placeholder="••••••••"
+                  />
+                </div>
+                <button type="submit" disabled={authLoading} className="w-full bg-amber-500 text-black py-4 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-amber-400 transition-colors mt-4">
+                  {authLoading ? 'Entrando...' : 'Acessar'}
+                </button>
+              </form>
+              <button 
+                type="button" 
+                onClick={() => setView('public_agenda')} 
+                className="mt-8 text-[11px] font-bold text-neutral-500 hover:text-amber-500 tracking-widest uppercase transition-colors"
+              >
+                Ir para Agendamentos
+              </button>
+            </motion.div>
+          )}
+
+          {view === 'public_agenda' && (
+            <motion.div 
+              key="p_agenda"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="w-full min-h-[70vh] flex flex-col items-center mt-10"
+            >
+              <div className="w-20 h-20 bg-gradient-to-br from-amber-400 to-amber-600 rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)] mb-8">
+                <Dumbbell size={40} className="text-black" strokeWidth={2.5} />
+              </div>
+              <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic text-center leading-none mb-2">K<span className="text-amber-500">Z</span> <br/><span className="text-xl text-neutral-400">Estúdio</span></h1>
+              <p className="text-neutral-500 font-bold uppercase tracking-widest text-[10px] mb-12">Agendamento de Aulas</p>
+              
+              <div className="glass-card-premium p-8 rounded-[2.5rem] w-full flex flex-col items-center text-center">
+                <CalendarDays size={48} className="text-amber-500/50 mb-6 drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]" />
+                <h3 className="text-2xl font-black text-white mb-2">Selecione seu horário</h3>
+                <p className="text-sm text-neutral-400 mb-8 font-medium">Veja a grade de aulas disponíveis no App.</p>
+                <button onClick={() => setView('agenda')} className="bg-white/5 border border-white/10 text-white w-full py-4 rounded-xl font-black uppercase tracking-widest hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-500 transition-all">
+                  Ver Grade Completa
+                </button>
+              </div>
+              
+              {!session && (
+              <button 
+                type="button"
+                onClick={() => setView('login')}
+                className="fixed bottom-6 right-6 text-[10px] text-neutral-700 hover:text-neutral-500 transition-colors uppercase font-bold tracking-widest"
+              >
+                Admin
+              </button>
+              )}
+            </motion.div>
+          )}
           {view === 'home' && (
             <motion.div 
               key="home"
@@ -2589,12 +2739,12 @@ export default function App() {
       {/* Modal Agenda (Gerenciar Horário) */}
       <Modal isOpen={isAgendaModalOpen} onClose={() => { setIsAgendaModalOpen(false); setSelectedBookingModality(''); setBookingSearchTerm(''); }}>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-2xl font-black tracking-tighter uppercase italic">Gerenciar <span className="text-amber-500">Horário</span></h2>
+          <h2 className="text-2xl font-black tracking-tighter uppercase italic">{session ? 'Gerenciar' : 'Agendar'} <span className="text-amber-500">{session ? 'Horário' : 'Aula'}</span></h2>
           <button onClick={() => { setIsAgendaModalOpen(false); setSelectedBookingModality(''); }} className="text-neutral-500 hover:text-white transition-colors">
             <X size={24} />
           </button>
         </div>
-        <p className="text-[11px] text-neutral-500 mb-8 font-bold uppercase tracking-widest">Controle de ocupação e modalidades</p>
+        <p className="text-[11px] text-neutral-500 mb-8 font-bold uppercase tracking-widest">{session ? 'Controle de ocupação e modalidades' : 'Selecione a modalidade e confirme sua presença'}</p>
 
         {/* Time Selection inside Modal */}
         <div className="mb-8 p-6 glass-card rounded-[2rem]">
@@ -2621,43 +2771,45 @@ export default function App() {
         </div>
 
         {/* Modality Selection */}
-        <div className="grid grid-cols-2 gap-3 mb-10">
-          {MODALITIES.map((mod) => {
-            const key = `${selectedAgendaDate}-${selectedTimeSlot}`;
-            const isActive = (agendaEvents[key]?.modalities || []).find(m => m.modality === mod);
-            
-            return (
-              <button
-                key={mod}
-                onClick={() => handleToggleModality(selectedTimeSlot, mod)}
-                className={cn(
-                  "py-4 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 text-center leading-tight flex items-center justify-center gap-2 border",
-                  isActive 
-                    ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_15px_rgba(245,158,11,0.2)]" 
-                    : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:border-amber-500/20"
-                )}
-              >
-                {isActive && <Check size={14} strokeWidth={4} />}
-                {mod}
-              </button>
-            );
-          })}
-        </div>
+        {session && (
+          <div className="grid grid-cols-2 gap-3 mb-10">
+            {MODALITIES.map((mod) => {
+              const key = `${selectedAgendaDate}-${selectedTimeSlot}`;
+              const isActive = (agendaEvents[key]?.modalities || []).find(m => m.modality === mod);
+              
+              return (
+                <button
+                  key={mod}
+                  onClick={() => handleToggleModality(selectedTimeSlot, mod)}
+                  className={cn(
+                    "py-4 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 text-center leading-tight flex items-center justify-center gap-2 border",
+                    isActive 
+                      ? "bg-amber-500 text-black border-amber-500 shadow-[0_5px_15px_rgba(245,158,11,0.2)]" 
+                      : "bg-white/[0.02] text-neutral-500 border-white/[0.05] hover:border-amber-500/20"
+                  )}
+                >
+                  {isActive && <Check size={14} strokeWidth={4} />}
+                  {mod}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Booking Management Section */}
         <AnimatePresence>
-          {(agendaEvents[`${selectedAgendaDate}-${selectedTimeSlot}`]?.modalities || []).length > 0 && (
+          {(agendaEvents[`${selectedAgendaDate}-${selectedTimeSlot}`]?.modalities || []).length > 0 ? (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               className="space-y-8"
             >
-              <div className="h-px bg-white/[0.05] w-full" />
+              <div className="h-px bg-white/[0.05] w-full mt-4" />
               
               {/* Select Modality to Add Students */}
               <div className="space-y-4">
-                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest block">Incluir Aluno em:</label>
+                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest block">{session ? 'Incluir Aluno em:' : 'Qual modalidade você vai treinar?'}</label>
                 <div className="flex flex-wrap gap-2">
                   {(agendaEvents[`${selectedAgendaDate}-${selectedTimeSlot}`]?.modalities || []).map(m => (
                     <button
@@ -2679,31 +2831,33 @@ export default function App() {
               {selectedBookingModality && (
                 <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-500">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Nome do Aluno</label>
-                    <button 
-                      onClick={() => setIsExperimental(!isExperimental)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-black transition-all border duration-500 uppercase tracking-widest",
-                        isExperimental ? "bg-amber-500 text-black border-amber-500" : "bg-neutral-900 text-neutral-500 border-white/5"
-                      )}
-                    >
-                      <Zap size={10} className={isExperimental ? "fill-black" : ""} />
-                      EXPERIMENTAL
-                    </button>
+                    <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">{session ? 'Nome do Aluno' : 'Seu Nome'}</label>
+                    {session && (
+                      <button 
+                        onClick={() => setIsExperimental(!isExperimental)}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-black transition-all border duration-500 uppercase tracking-widest",
+                          isExperimental ? "bg-amber-500 text-black border-amber-500" : "bg-neutral-900 text-neutral-500 border-white/5"
+                        )}
+                      >
+                        <Zap size={10} className={isExperimental ? "fill-black" : ""} />
+                        EXPERIMENTAL
+                      </button>
+                    )}
                   </div>
                   
                   <div className="flex gap-3">
                     <div className="relative flex-1">
                       <input 
                         type="text"
-                        placeholder={isExperimental ? "Nome do aluno experimental..." : "Buscar aluno regular..."}
+                        placeholder={session ? (isExperimental ? "Nome do aluno experimental..." : "Buscar aluno regular...") : "Digite seu nome para confirmar..."}
                         value={bookingSearchTerm}
                         onChange={(e) => setBookingSearchTerm(e.target.value)}
                         className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 px-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 text-white placeholder:text-neutral-700"
                       />
                       
                       {/* Quick Suggestions for Regular Students */}
-                      {!isExperimental && bookingSearchTerm.length > 1 && (
+                      {(!isExperimental || !session) && bookingSearchTerm.length > 1 && (
                         <div className="absolute left-0 right-0 top-full mt-2 bg-[#0a0a0b] border border-white/[0.1] rounded-[1.5rem] shadow-2xl z-[60] overflow-hidden backdrop-blur-3xl">
                           {students
                             .filter(s => s.name.toLowerCase().includes(bookingSearchTerm.toLowerCase()))
@@ -2721,11 +2875,11 @@ export default function App() {
                     </div>
                     
                     <button 
-                      onClick={() => handleAddBooking(bookingSearchTerm, isExperimental)}
+                      onClick={() => handleAddBooking(bookingSearchTerm, session ? isExperimental : false)}
                       disabled={!bookingSearchTerm.trim()}
-                      className="bg-amber-500 text-black px-6 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-30 transition-all hover:bg-amber-400"
+                      className="bg-amber-500 text-black px-6 rounded-xl font-black text-xs uppercase tracking-widest disabled:opacity-30 transition-all hover:bg-amber-400 focus:scale-95"
                     >
-                      ADICIONAR
+                      {session ? 'ADICIONAR' : 'CONFIRMAR PRESENÇA'}
                     </button>
                   </div>
                 </div>
@@ -2752,12 +2906,14 @@ export default function App() {
                               )}
                             </div>
                           </div>
-                          <button 
-                            onClick={() => handleRemoveBooking(m.modality, b.id)}
-                            className="w-10 h-10 flex items-center justify-center text-neutral-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          {session && (
+                            <button 
+                              onClick={() => handleRemoveBooking(m.modality, b.id)}
+                              className="w-10 h-10 flex items-center justify-center text-neutral-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
                         </div>
                       ))}
                       {m.bookings.length === 0 && (
@@ -2769,6 +2925,16 @@ export default function App() {
                   </div>
                 ))}
               </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center py-10"
+            >
+              <p className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest">Nenhuma aula programada para este horário.</p>
+              {session && <p className="text-[9px] font-medium text-neutral-600 mt-2 block">Selecione uma modalidade acima abri-la na grade.</p>}
             </motion.div>
           )}
         </AnimatePresence>
@@ -2888,44 +3054,46 @@ export default function App() {
       </Modal>
 
       {/* Bottom Navigation (Mobile Only) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0b]/60 backdrop-blur-3xl border-t border-white/[0.05] px-8 py-5 flex lg:hidden items-center justify-around z-[100] safe-area-bottom">
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
-        <NavItem 
-          id="home" 
-          icon={LayoutDashboard} 
-          label="Início" 
-          active={view === 'home'} 
-          onClick={() => setView('home')} 
-        />
-        <NavItem 
-          id="alunos" 
-          icon={Users} 
-          label="Membros" 
-          active={view === 'alunos'} 
-          onClick={() => setView('alunos')} 
-        />
-        <NavItem 
-          id="experimentais" 
-          icon={Zap} 
-          label="Aulas" 
-          active={view === 'experimentais'} 
-          onClick={() => setView('experimentais')} 
-        />
-        <NavItem 
-          id="agenda" 
-          icon={CalendarDays} 
-          label="Agenda" 
-          active={view === 'agenda'} 
-          onClick={() => setView('agenda')} 
-        />
-        <NavItem 
-          id="financeiro" 
-          icon={Wallet} 
-          label="Caixa" 
-          active={view === 'financeiro'} 
-          onClick={() => setView('financeiro')} 
-        />
-      </nav>
+      {session && view !== 'public_agenda' && view !== 'login' && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0b]/60 backdrop-blur-3xl border-t border-white/[0.05] px-8 py-5 flex lg:hidden items-center justify-around z-[100] safe-area-bottom">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+          <NavItem 
+            id="home" 
+            icon={LayoutDashboard} 
+            label="Início" 
+            active={view === 'home'} 
+            onClick={() => setView('home')} 
+          />
+          <NavItem 
+            id="alunos" 
+            icon={Users} 
+            label="Membros" 
+            active={view === 'alunos'} 
+            onClick={() => setView('alunos')} 
+          />
+          <NavItem 
+            id="experimentais" 
+            icon={Zap} 
+            label="Aulas" 
+            active={view === 'experimentais'} 
+            onClick={() => setView('experimentais')} 
+          />
+          <NavItem 
+            id="agenda" 
+            icon={CalendarDays} 
+            label="Agenda" 
+            active={view === 'agenda'} 
+            onClick={() => setView('agenda')} 
+          />
+          <NavItem 
+            id="financeiro" 
+            icon={Wallet} 
+            label="Caixa" 
+            active={view === 'financeiro'} 
+            onClick={() => setView('financeiro')} 
+          />
+        </nav>
+      )}
       </div>
     </div>
   );
