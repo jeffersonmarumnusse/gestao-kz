@@ -1328,20 +1328,21 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               className="w-full min-h-[70vh] flex flex-col items-center mt-10"
             >
-              <div className="w-20 h-20 bg-gradient-to-br from-amber-400 to-amber-600 rounded-3xl flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.4)] mb-8">
-                <Dumbbell size={40} className="text-black" strokeWidth={2.5} />
+              <div className="flex items-center justify-center gap-6 mb-16">
+                <div className="w-24 h-24 bg-gradient-to-br from-amber-400 to-amber-600 rounded-[2rem] flex items-center justify-center shadow-[0_0_40px_rgba(245,158,11,0.4)]">
+                  <Dumbbell size={48} className="text-black" strokeWidth={2.5} />
+                </div>
+                <h1 className="text-6xl font-black tracking-tighter text-white uppercase italic flex items-center">
+                  K<span className="text-amber-500">Z</span>
+                </h1>
               </div>
-              <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic text-center leading-none mb-2">K<span className="text-amber-500">Z</span> <br/><span className="text-xl text-neutral-400">Estúdio</span></h1>
-              <p className="text-neutral-500 font-bold uppercase tracking-widest text-[10px] mb-12">Agendamento de Aulas</p>
-              
-              <div className="glass-card-premium p-8 rounded-[2.5rem] w-full flex flex-col items-center text-center">
-                <CalendarDays size={48} className="text-amber-500/50 mb-6 drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]" />
-                <h3 className="text-2xl font-black text-white mb-2">Selecione seu horário</h3>
-                <p className="text-sm text-neutral-400 mb-8 font-medium">Veja a grade de aulas disponíveis no App.</p>
-                <button onClick={() => setView('agenda')} className="bg-white/5 border border-white/10 text-white w-full py-4 rounded-xl font-black uppercase tracking-widest hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-500 transition-all">
-                  Ver Grade Completa
-                </button>
-              </div>
+
+              <button 
+                onClick={() => setView('agenda')} 
+                className="bg-amber-500 text-black px-10 py-5 rounded-2xl font-black text-lg uppercase tracking-[0.2em] hover:bg-amber-400 active:scale-95 transition-all shadow-[0_15px_40px_rgba(245,158,11,0.3)]"
+              >
+                Marque sua Aula
+              </button>
               
               {!session && (
               <button 
