@@ -1237,8 +1237,9 @@ export default function App() {
         });
 
       if (uploadError) {
-        if (uploadError.message.includes('bucket not found')) {
-           alert('Bucket "reports" não existe no Supabase. O PDF será baixado localmente.');
+        const errorMsg = uploadError.message.toLowerCase();
+        if (errorMsg.includes('bucket not found') || errorMsg.includes('bucket_not_found')) {
+           alert('O bucket "reports" não foi encontrado no Supabase Storage. O PDF será baixado localmente para o seu computador agora.');
            doc.save(fileName);
            setIsGeneratingReport(false);
            return;
