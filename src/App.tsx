@@ -1259,6 +1259,9 @@ export default function App() {
 
       if (dbError) throw dbError;
 
+      // Force refresh data
+      await fetchData();
+
       alert('Relatório gerado e salvo com sucesso!');
     } catch (error: any) {
       console.error('Erro ao gerar relatório:', error);
