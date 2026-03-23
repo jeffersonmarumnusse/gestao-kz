@@ -39,7 +39,9 @@ import {
   Camera,
   Link2,
   Phone,
-  LogOut
+  LogOut,
+  Download,
+  Archive
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -59,6 +61,8 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
   import { supabase } from './lib/supabase';
+  import jsPDF from 'jspdf';
+  import autoTable from 'jspdf-autotable';
 
 // --- Utils ---
   function cn(...inputs: ClassValue[]) {
@@ -263,6 +267,13 @@ export default function App() {
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [editingExperimental, setEditingExperimental] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Reports State
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportMonth, setReportMonth] = useState(() => new Date().getMonth() + 1);
+  const [reportYear, setReportYear] = useState(() => new Date().getFullYear());
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [monthlyReports, setMonthlyReports] = useState<any[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -476,6 +487,12 @@ export default function App() {
       });
       setAgendaEvents(groupedAgenda);
     } else if (agendaError) console.error('Erro ao buscar agenda:', agendaError);
+
+    // Fetch Relatórios Mensais
+    const { data: reportsData, error: reportsError } = await supabase.from('monthly_reports').select('*').order('created_at', { ascending: false });
+    if (reportsData) {
+      setMonthlyReports(reportsData);
+    } else if (reportsError) console.error('Erro ao buscar relatórios:', reportsError);
   };
 
   useEffect(() => {
@@ -487,6 +504,7 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'experimental_students' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_bookings' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'monthly_reports' }, () => fetchData())
       .subscribe();
 
     return () => {
@@ -1164,6 +1182,91 @@ export default function App() {
     setIsAgendaModalOpen(true);
   };
 
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    try {
+      const filteredTrans = transactions.filter((t: any) => {
+        const d = new Date(t.date);
+        return d.getMonth() + 1 === reportMonth && d.getFullYear() === reportYear;
+      });
+
+      const filteredNewStudents = students.filter((s: any) => {
+        if (!s.enrollmentDate) return false;
+        const d = new Date(s.enrollmentDate);
+        return d.getMonth() + 1 === reportMonth && d.getFullYear() === reportYear;
+      });
+
+      let inTotal = 0, outTotal = 0;
+      filteredTrans.forEach((t: any) => {
+        if (t.type === 'in' && t.status === 'completed') inTotal += Number(t.amount);
+        if (t.type === 'out' && t.status === 'completed') outTotal += Number(t.amount);
+      });
+      const balance = inTotal - outTotal;
+
+      const doc = new jsPDF();
+      
+      doc.setFontSize(20);
+      doc.text(`Relatório Mensal - ${String(reportMonth).padStart(2, '0')}/${reportYear}`, 14, 22);
+      
+      doc.setFontSize(12);
+      doc.text(`Total de Receitas (Concluidas): R$ ${inTotal.toFixed(2)}`, 14, 32);
+      doc.text(`Total de Despesas (Concluidas): R$ ${outTotal.toFixed(2)}`, 14, 40);
+      doc.text(`Saldo Final: R$ ${balance.toFixed(2)}`, 14, 48);
+      doc.text(`Novos Alunos no Mes: ${filteredNewStudents.length}`, 14, 56);
+
+      const tableData = filteredTrans.map((t: any) => [
+        formatDisplayDate(t.date),
+        t.description,
+        t.type === 'in' ? 'Receita' : 'Despesa',
+        t.status === 'completed' ? 'Concluido' : 'Pendente',
+        `R$ ${Number(t.amount).toFixed(2)}`
+      ]);
+
+      autoTable(doc, {
+        startY: 64,
+        head: [['Data', 'Descricao', 'Tipo', 'Status', 'Valor']],
+        body: tableData,
+      });
+
+      const pdfBlob = doc.output('blob');
+      const fileName = `relatorio-${reportYear}-${reportMonth}-${Date.now()}.pdf`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('reports')
+        .upload(fileName, pdfBlob, {
+          contentType: 'application/pdf'
+        });
+
+      if (uploadError) {
+        if (uploadError.message.includes('bucket not found')) {
+           alert('Bucket "reports" não existe no Supabase. O PDF será baixado localmente.');
+           doc.save(fileName);
+           setIsGeneratingReport(false);
+           return;
+        }
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('reports')
+        .getPublicUrl(fileName);
+
+      const { error: dbError } = await supabase.from('monthly_reports').insert([{
+        month: reportMonth,
+        year: reportYear,
+        file_url: publicUrl
+      }]);
+
+      if (dbError) throw dbError;
+
+      alert('Relatório gerado e salvo com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao gerar relatório:', error);
+      alert('Erro ao gerar relatório: ' + error.message);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
   const BackgroundBlobs = () => (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
       <motion.div
@@ -1579,6 +1682,16 @@ export default function App() {
                   isCurrency 
                   type="info" 
                 />
+              </section>
+
+              <section className="flex justify-end">
+                <button 
+                  onClick={() => setIsReportModalOpen(true)}
+                  className="flex items-center gap-2 px-6 py-3 bg-white/[0.03] border border-white/[0.08] hover:border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-500 transition-all rounded-2xl font-bold text-sm tracking-widest uppercase text-neutral-400"
+                >
+                  <FileText size={18} />
+                  Relatórios
+                </button>
               </section>
 
               {/* New Students Monthly Chart */}
@@ -3050,6 +3163,92 @@ export default function App() {
             >
               {editingTransaction ? 'Salvar Alterações' : 'Concluir Lançamento'}
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Relatórios Mensais */}
+      <Modal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)}>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-2xl font-black tracking-tighter uppercase italic">Relatórios <span className="text-amber-500">Mensais</span></h2>
+          <button onClick={() => setIsReportModalOpen(false)} className="text-neutral-500 hover:text-white transition-colors">
+            <X size={24} />
+          </button>
+        </div>
+        <p className="text-[11px] text-neutral-500 mb-8 font-bold uppercase tracking-widest">Arquivamento e Geração de PDFs</p>
+
+        <div className="space-y-8">
+          <div className="glass-card p-6 rounded-[2rem] border border-white/[0.05]">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-4 block">Gerar Novo Relatório</label>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest mb-2 block">Mês</label>
+                <select 
+                  value={reportMonth}
+                  onChange={(e) => setReportMonth(Number(e.target.value))}
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-3 px-4 text-sm font-bold focus:outline-none focus:border-amber-500/50 text-white"
+                >
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                    <option key={m} value={m} className="bg-[#0a0a0b]">{String(m).padStart(2, '0')}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest mb-2 block">Ano</label>
+                <select 
+                  value={reportYear}
+                  onChange={(e) => setReportYear(Number(e.target.value))}
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-3 px-4 text-sm font-bold focus:outline-none focus:border-amber-500/50 text-white"
+                >
+                  {[2024, 2025, 2026, 2027].map(y => (
+                    <option key={y} value={y} className="bg-[#0a0a0b]">{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <button 
+              onClick={handleGenerateReport}
+              disabled={isGeneratingReport}
+              className="w-full bg-amber-500 text-black py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-amber-400 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {isGeneratingReport ? 'Gerando...' : 'Gerar e Arquivar PDF'}
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-2">
+              <Archive size={14} />
+              Relatórios Arquivados
+            </h3>
+            
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+              {monthlyReports.length > 0 ? (
+                monthlyReports.map((report) => (
+                  <div key={report.id} className="flex items-center justify-between bg-white/[0.02] border border-white/[0.05] p-4 rounded-2xl group hover:border-amber-500/20 transition-all">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-white">
+                        Mês {String(report.month).padStart(2, '0')} / {report.year}
+                      </span>
+                      <span className="text-[9px] font-bold text-neutral-600 uppercase tracking-widest">
+                        Gerado em {new Date(report.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                    <a 
+                      href={report.file_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="w-10 h-10 flex items-center justify-center bg-amber-500/10 text-amber-500 rounded-xl hover:bg-amber-500 hover:text-black transition-all"
+                    >
+                      <Download size={18} />
+                    </a>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-10 border border-dashed border-white/[0.05] rounded-2xl">
+                  <p className="text-[10px] font-bold text-neutral-700 uppercase tracking-widest">Nenhum relatório arquivado</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </Modal>
