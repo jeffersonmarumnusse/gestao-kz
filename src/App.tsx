@@ -1885,6 +1885,14 @@ export default function App() {
                               </span>
                             </div>
                           )}
+                          {s.birthDate && (
+                            <div className="flex items-center gap-1.5 opacity-60">
+                              <Cake size={10} className="text-rose-500" />
+                              <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">
+                                Nasc: {formatDisplayDate(s.birthDate)}
+                              </span>
+                            </div>
+                          )}
                           {s.phone && (
                             <button 
                               onClick={() => {
@@ -2071,6 +2079,14 @@ export default function App() {
                               <Calendar size={10} />
                               <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">
                                 {formatDisplayDate(s.enrollmentDate)}
+                              </span>
+                            </div>
+                          )}
+                          {s.birthDate && (
+                            <div className="flex items-center gap-1.5 opacity-60">
+                              <Cake size={10} className="text-rose-500" />
+                              <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">
+                                Nasc: {formatDisplayDate(s.birthDate)}
                               </span>
                             </div>
                           )}
@@ -2576,6 +2592,15 @@ export default function App() {
                 className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 px-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white [color-scheme:dark]"
               />
             </div>
+            <div>
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Data de Nascimento</label>
+              <input 
+                type="date" 
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 px-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white [color-scheme:dark]"
+              />
+            </div>
           </div>
 
           <div>
@@ -2733,6 +2758,15 @@ export default function App() {
                 type="date" 
                 value={enrollmentDate}
                 onChange={(e) => setEnrollmentDate(e.target.value)}
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 px-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white [color-scheme:dark]"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] mb-3 block">Data de Nascimento</label>
+              <input 
+                type="date" 
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
                 className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl py-4 px-5 text-sm font-bold focus:outline-none focus:border-amber-500/50 transition-all text-white [color-scheme:dark]"
               />
             </div>
