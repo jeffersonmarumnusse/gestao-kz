@@ -592,6 +592,19 @@ export default function App() {
     return rows.slice(-6);
   }, [transactions]);
 
+  const expensesByItem = useMemo(() => {
+    const map: Record<string, number> = {};
+    transactions
+      .filter((t: any) => t.type === 'out')
+      .forEach((t: any) => {
+        map[t.description] = (map[t.description] || 0) + Number(t.amount || 0);
+      });
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }, [transactions]);
+
   const handleAddTransaction = async () => {
     if (!newTransDesc || !newTransValue) return;
     
@@ -2130,6 +2143,13 @@ export default function App() {
                       >
                         <Edit2 size={18} />
                       </button>
+                      <button 
+                        onClick={() => handleDeleteStudent(s.id)}
+                        className="w-10 h-10 flex items-center justify-center text-rose-500/50 bg-rose-500/5 border border-rose-500/10 rounded-xl hover:text-rose-500 hover:bg-rose-500/10 transition-all"
+                        title="Excluir Aluno"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </motion.div>
                 ))}
@@ -2405,6 +2425,81 @@ export default function App() {
                   </ResponsiveContainer>
                 </div>
               </section>
+
+              {/* Expenses by Item Chart */}
+              {expensesByItem.length > 0 && (
+                <section className="glass-card p-8 rounded-[2.5rem] relative overflow-hidden">
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-1.5">Controlo de Gastos</p>
+                      <h2 className="text-white font-black text-2xl tracking-tight leading-none">
+                        Despesas <span className="text-rose-500">por Item</span>
+                      </h2>
+                    </div>
+                    <div className="flex items-center gap-2 bg-rose-500/10 px-4 py-2 rounded-2xl border border-rose-500/20">
+                      <ArrowDownRight size={14} className="text-rose-500" />
+                      <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">
+                        R$ {expensesByItem.reduce((s, i) => s + i.value, 0).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="h-[240px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={expensesByItem}
+                        margin={{ top: 24, right: 10, left: -20, bottom: 60 }}
+                      >
+                        <XAxis
+                          dataKey="name"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 9, fill: '#525252', fontWeight: 800 }}
+                          angle={-40}
+                          textAnchor="end"
+                          interval={0}
+                          height={70}
+                        />
+                        <YAxis hide />
+                        <Tooltip
+                          cursor={{ fill: 'rgba(244,63,94,0.05)' }}
+                          contentStyle={{
+                            background: 'rgba(10,10,11,0.9)',
+                            backdropFilter: 'blur(16px)',
+                            border: '1px solid rgba(244,63,94,0.2)',
+                            borderRadius: '1.25rem',
+                            padding: '12px 16px'
+                          }}
+                          formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR')}`, 'Total']}
+                          labelStyle={{ color: '#f43f5e', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}
+                          itemStyle={{ color: '#fff', fontSize: 13, fontWeight: 700 }}
+                        />
+                        <Bar dataKey="value" radius={[10, 10, 10, 10]} barSize={36} fill="#f43f5e" animationDuration={1500}>
+                          <LabelList
+                            dataKey="value"
+                            position="top"
+                            content={(props: any) => {
+                              const { x, y, width, value } = props;
+                              if (!value) return null;
+                              return (
+                                <text
+                                  x={x + width / 2}
+                                  y={y - 10}
+                                  fill="#f43f5e"
+                                  fontSize={10}
+                                  fontWeight={800}
+                                  textAnchor="middle"
+                                >
+                                  {Number(value).toLocaleString('pt-BR')}
+                                </text>
+                              );
+                            }}
+                          />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </section>
+              )}
 
               {/* Transaction Filters */}
               <div className="glass-card p-1.5 rounded-[1.8rem] flex gap-1 bg-white/[0.01]">
