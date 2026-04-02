@@ -267,6 +267,7 @@ export default function App() {
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [editingExperimental, setEditingExperimental] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'ativos' | 'em_dia' | 'atrasados'>('ativos');
 
   // Reports State
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -516,7 +517,17 @@ export default function App() {
   // Remove Persistence Effects (localStorage)
   // useEffect(() => { ... }, [students, ...]);
 
-  const filteredStudents = students.filter((s: any) => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredStudents = students.filter((s: any) => {
+    const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         (s.plan && s.plan.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesStatus = 
+      statusFilter === 'em_dia' ? s.status === 'Em dia' :
+      statusFilter === 'atrasados' ? s.status === 'Pendente' :
+      s.status !== 'Cancelado'; // 'ativos'
+      
+    return matchesSearch && matchesStatus;
+  });
   const filteredExperimental = experimentalStudents.filter((s: any) => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   // Finance Calculations
@@ -2133,15 +2144,26 @@ export default function App() {
               {/* Student Status Cards */}
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { label: 'Ativos', value: students.filter(s => s.status !== 'Cancelado').length.toString(), color: 'text-white' },
-                  { label: 'Em Dia', value: students.filter(s => s.status === 'Em dia').length.toString(), color: 'text-amber-500' },
-                  { label: 'Atrasos', value: students.filter(s => s.status === 'Pendente').length.toString(), color: 'text-rose-500' },
+                  { id: 'ativos', label: 'Ativos', value: students.filter(s => s.status !== 'Cancelado').length.toString(), color: 'text-white', glow: 'bg-white/10' },
+                  { id: 'em_dia', label: 'Em Dia', value: students.filter(s => s.status === 'Em dia').length.toString(), color: 'text-amber-500', glow: 'bg-amber-500/10' },
+                  { id: 'atrasados', label: 'Atrasos', value: students.filter(s => s.status === 'Pendente').length.toString(), color: 'text-rose-500', glow: 'bg-rose-500/10' },
                 ].map((stat) => (
-                  <div key={stat.label} className="glass-card p-5 rounded-[2rem] text-center relative overflow-hidden group/stat">
-                    <div className="absolute inset-0 bg-white/[0.01] group-hover/stat:bg-white/[0.03] transition-colors" />
-                    <p className={cn("text-2xl font-black mb-1 relative z-10", stat.color)}>{stat.value}</p>
+                  <button 
+                    key={stat.id} 
+                    onClick={() => setStatusFilter(stat.id as any)}
+                    className={cn(
+                      "glass-card p-5 rounded-[2rem] text-center relative overflow-hidden group/stat transition-all duration-300 border",
+                      statusFilter === stat.id ? "border-white/30 scale-[1.02] shadow-[0_10px_30px_rgba(255,255,255,0.05)]" : "border-white/[0.05] hover:border-white/10"
+                    )}
+                  >
+                    <div className={cn(
+                      "absolute inset-0 transition-opacity duration-500", 
+                      statusFilter === stat.id ? "opacity-100" : "opacity-0 group-hover/stat:opacity-100",
+                      stat.glow
+                    )} />
+                    <p className={cn("text-2xl font-black mb-1 relative z-10", stat.color, statusFilter === stat.id && "drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]")}>{stat.value}</p>
                     <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-[0.2em] relative z-10">{stat.label}</p>
-                  </div>
+                  </button>
                 ))}
               </div>
 
