@@ -72,7 +72,9 @@ import { twMerge } from 'tailwind-merge';
   function formatDisplayDate(dateStr: string) {
     if (!dateStr) return '';
     const [year, month, day] = dateStr.split('-');
-    return `${day}/${month}/${year}`;
+    const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+    const monthIndex = parseInt(month) - 1;
+    return `${day} DE ${months[monthIndex]}. DE ${year}`;
   }
 
   function getTodayDateString() {
