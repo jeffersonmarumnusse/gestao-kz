@@ -75,6 +75,17 @@ import { twMerge } from 'tailwind-merge';
     return `${day}/${month}/${year}`;
   }
 
+  function getTodayDateString() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }
+
+  function parseLocalDate(dateStr: string) {
+    if (!dateStr) return new Date();
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
 // --- Constants ---
 const MODALITIES = [
   'FUNCIONAL',
@@ -379,7 +390,7 @@ export default function App() {
   const [newStudentValue, setNewStudentValue] = useState('');
   const [preferredTime, setPreferredTime] = useState('');
   const [preferredModality, setPreferredModality] = useState('');
-  const [enrollmentDate, setEnrollmentDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [enrollmentDate, setEnrollmentDate] = useState(() => getTodayDateString());
   const [preferredDueDay, setPreferredDueDay] = useState('10');
   const [birthDate, setBirthDate] = useState('');
   const [phone, setPhone] = useState('');
@@ -390,7 +401,7 @@ export default function App() {
     const day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1);
     return new Date(d.setDate(diff));
   });
-  const [selectedAgendaDate, setSelectedAgendaDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [selectedAgendaDate, setSelectedAgendaDate] = useState<string>(() => getTodayDateString());
   const [agendaEvents, setAgendaEvents] = useState<Record<string, AgendaSlot>>({});
   const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
@@ -410,7 +421,7 @@ export default function App() {
   const [newTransStatus, setNewTransStatus] = useState<'pending' | 'completed'>('completed');
   const [newTransDesc, setNewTransDesc] = useState('');
   const [newTransValue, setNewTransValue] = useState('');
-  const [newTransDate, setNewTransDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [newTransDate, setNewTransDate] = useState(() => getTodayDateString());
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
 
   // Fetch from Supabase
@@ -568,7 +579,8 @@ export default function App() {
       new Date(year, monthIndex0, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
 
     const parseDateSafe = (value: any) => {
-      const d = new Date(value);
+      if (!value) return null;
+      const d = parseLocalDate(value);
       return Number.isNaN(d.getTime()) ? null : d;
     };
 
@@ -650,7 +662,7 @@ export default function App() {
     
     setNewTransDesc('');
     setNewTransValue('');
-    setNewTransDate(new Date().toISOString().split('T')[0]);
+    setNewTransDate(getTodayDateString());
     setNewTransStatus('completed');
     setEditingTransaction(null);
     setIsFinanceModalOpen(false);
@@ -972,7 +984,7 @@ export default function App() {
         amount: amount,
         type: 'in',
         status: selectedPayment === 'Em dia' ? 'completed' : 'pending',
-        date: new Date().toISOString().split('T')[0]
+        date: getTodayDateString()
       };
       
       const { error: transError } = await supabase.from('transactions').insert([newTrans]);
@@ -996,7 +1008,7 @@ export default function App() {
     setNewStudentValue('');
     setPreferredTime('');
     setPreferredModality('');
-    setEnrollmentDate(new Date().toISOString().split('T')[0]);
+    setEnrollmentDate(getTodayDateString());
     setPreferredDueDay('10');
     setBirthDate('');
     setPhone('');
@@ -1056,7 +1068,7 @@ export default function App() {
     setNewStudentValue('');
     setPreferredTime('');
     setPreferredModality('');
-    setEnrollmentDate(new Date().toISOString().split('T')[0]);
+    setEnrollmentDate(getTodayDateString());
     setPreferredDueDay('10');
     setBirthDate('');
     setPhone('');
@@ -1091,7 +1103,7 @@ export default function App() {
 
   const handleCancelStudent = async (student: any) => {
     if (window.confirm(`Deseja marcar ${student.name} como desistente? (Cancelamento de Matrícula)`)) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayDateString();
       const { error } = await supabase
         .from('students')
         .update({ status: 'Cancelado', cancelled_at: today })
@@ -1129,7 +1141,7 @@ export default function App() {
     setNewStudentValue(student.value ? student.value.toString() : '');
     setPreferredTime(student.preferredTime || '');
     setPreferredModality(student.preferredModality || '');
-    setEnrollmentDate(student.enrollmentDate || new Date().toISOString().split('T')[0]);
+    setEnrollmentDate(student.enrollmentDate || getTodayDateString());
     setPreferredDueDay(student.preferredDueDay || '10');
     setBirthDate(student.birthDate || '');
     setPhone(student.phone || '');
@@ -1142,7 +1154,7 @@ export default function App() {
     setNewStudentValue('');
     setPreferredTime(student.preferredTime || '');
     setPreferredModality(student.preferredModality || '');
-    setEnrollmentDate(student.enrollmentDate || new Date().toISOString().split('T')[0]);
+    setEnrollmentDate(student.enrollmentDate || getTodayDateString());
     setBirthDate(student.birthDate || '');
     setPhone(student.phone || '');
     setNewStudentPhotoUrl(student.photoUrl || '');
@@ -1250,7 +1262,7 @@ export default function App() {
   const handleOpenCheckin = () => {
     const now = new Date();
     const hour = now.getHours().toString().padStart(2, '0') + ':00';
-    const today = now.toISOString().split('T')[0];
+    const today = getTodayDateString();
     
     setSelectedAgendaDate(today);
     setSelectedTimeSlot(hour);
@@ -1261,13 +1273,13 @@ export default function App() {
     setIsGeneratingReport(true);
     try {
       const filteredTrans = transactions.filter((t: any) => {
-        const d = new Date(t.date);
+        const d = parseLocalDate(t.date);
         return d.getMonth() + 1 === reportMonth && d.getFullYear() === reportYear;
       });
 
       const filteredNewStudents = students.filter((s: any) => {
         if (!s.enrollmentDate) return false;
-        const d = new Date(s.enrollmentDate);
+        const d = parseLocalDate(s.enrollmentDate);
         return d.getMonth() + 1 === reportMonth && d.getFullYear() === reportYear;
       });
 
@@ -2691,7 +2703,7 @@ export default function App() {
                           )}
                         </div>
                         <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">
-                          {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {formatDisplayDate(t.date)}
                         </p>
                       </div>
                     </div>
