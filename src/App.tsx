@@ -796,7 +796,13 @@ export default function App() {
   // Attendance Ranking Data (Top students by total bookings)
   const studentAttendanceMap = useMemo(() => {
     const counts: Record<string, number> = {};
-    Object.values(agendaEvents).forEach(slot => {
+    const now = new Date();
+    const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    Object.entries(agendaEvents).forEach(([key, slot]) => {
+      // Somente conta agendamentos do mês atual (Chave: "YYYY-MM-DD-HH:MM")
+      if (!key.startsWith(currentYearMonth)) return;
+
       slot.modalities.forEach(modalitySlot => {
         modalitySlot.bookings.forEach(booking => {
           const name = booking.studentName?.trim() || '';
