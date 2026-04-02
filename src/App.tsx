@@ -1618,9 +1618,6 @@ export default function App() {
                       )}
                     </div>
                   </div>
-                  <button className="self-end lg:self-center p-3 glass-card rounded-2xl text-neutral-600 hover:text-amber-500 transition-colors">
-                    <MoreHorizontal size={20} />
-                  </button>
                 </div>
                 
                 <div className="relative group/chart">
