@@ -430,7 +430,8 @@ export default function App() {
         preferredDueDay: s.preferred_due_day,
         birthDate: s.birth_date,
         phone: s.phone,
-        photoUrl: s.photo_url
+        photoUrl: s.photo_url,
+        cancelledAt: s.cancelled_at
       }));
       setStudents(mapped);
     } else if (studentsError) console.error('Erro ao buscar alunos:', studentsError);
@@ -818,7 +819,7 @@ export default function App() {
 
     const byMonth = new Map<string, { year: number; month0: number; total: number }>();
 
-    // Build last 6 months skeleton so months with 0 still appear
+    // Build last 6 months skeleton
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -828,9 +829,40 @@ export default function App() {
 
     for (const s of students) {
       if (!s.enrollmentDate) continue;
-      const d = new Date(s.enrollmentDate);
-      if (isNaN(d.getTime())) continue;
+      // Parsing agnóstico ao fuso horário (AAAA-MM-DD)
+      const parts = s.enrollmentDate.split('-');
+      if (parts.length < 2) continue;
+      const key = `${parts[0]}-${parts[1]}`;
+      
+      const entry = byMonth.get(key);
+      if (entry) entry.total += 1;
+    }
+
+    return Array.from(byMonth.values())
+      .sort((a, b) => (a.year - b.year) || (a.month0 - b.month0))
+      .map(m => ({ name: monthLabel(m.year, m.month0), total: m.total }));
+  }, [students]);
+
+  // Cancelled students per month (based on cancelledAt)
+  const cancelledStudentsChartData = useMemo(() => {
+    const monthLabel = (year: number, monthIndex0: number) =>
+      new Date(year, monthIndex0, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+
+    const byMonth = new Map<string, { year: number; month0: number; total: number }>();
+
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      byMonth.set(key, { year: d.getFullYear(), month0: d.getMonth(), total: 0 });
+    }
+
+    for (const s of students) {
+      if (s.status !== 'Cancelado' || !s.cancelledAt) continue;
+      const parts = s.cancelledAt.split('-');
+      if (parts.length < 2) continue;
+      const key = `${parts[0]}-${parts[1]}`;
+      
       const entry = byMonth.get(key);
       if (entry) entry.total += 1;
     }
@@ -1044,6 +1076,25 @@ export default function App() {
     setTransactions(transactions.map((t: any) => 
       t.studentId == student.id ? { ...t, status: newTransStatus } : t
     ));
+  };
+
+  const handleCancelStudent = async (student: any) => {
+    if (window.confirm(`Deseja marcar ${student.name} como desistente? (Cancelamento de Matrícula)`)) {
+      const today = new Date().toISOString().split('T')[0];
+      const { error } = await supabase
+        .from('students')
+        .update({ status: 'Cancelado', cancelled_at: today })
+        .eq('id', student.id);
+      
+      if (error) {
+        console.error('Erro ao cancelar aluno:', error);
+        alert(`Erro ao cancelar aluno: ${error.message}`);
+        return;
+      }
+      
+      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, status: 'Cancelado', cancelledAt: today } : s));
+      alert('Matrícula cancelada com sucesso.');
+    }
   };
 
   const handleDeleteStudent = async (id: number) => {
@@ -1726,7 +1777,7 @@ export default function App() {
                   <div className="flex items-center gap-2.5 bg-amber-500/10 px-4 py-2 rounded-2xl border border-amber-500/20">
                     <UserPlus size={14} className="text-amber-500" />
                     <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">
-                      {students.length} Total
+                      {students.filter(s => s.status !== 'Cancelado').length} Ativos
                     </span>
                   </div>
                 </div>
@@ -1768,6 +1819,70 @@ export default function App() {
                         fill="url(#newStudentsGrad)"
                         dot={{ fill: '#fbbf24', r: 5, strokeWidth: 0 }}
                         activeDot={{ fill: '#fbbf24', r: 8, strokeWidth: 3, stroke: '#0a0a0b' }}
+                        animationDuration={2500}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </section>
+
+              {/* Cancelled Students Monthly Chart */}
+              <section className="glass-card p-8 rounded-[2.5rem] relative overflow-hidden group">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-1.5">Desistências / Saídas</p>
+                    <h2 className="text-white font-black text-2xl tracking-tight leading-none">
+                      Cancelamentos
+                      <span className="ml-3 text-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]">
+                        {cancelledStudentsChartData.at(-1)?.total ?? 0}
+                      </span>
+                    </h2>
+                  </div>
+                  <div className="flex items-center gap-2.5 bg-rose-500/10 px-4 py-2 rounded-2xl border border-rose-500/20">
+                    <LogOut size={14} className="text-rose-500" />
+                    <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">
+                      {students.filter(s => s.status === 'Cancelado').length} Inativos
+                    </span>
+                  </div>
+                </div>
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={cancelledStudentsChartData} margin={{ top: 20, right: 0, left: -40, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="cancelledStudentsGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#525252', fontWeight: 800 }}
+                        dy={10}
+                      />
+                      <YAxis hide allowDecimals={false} />
+                      <Tooltip
+                        cursor={{ stroke: '#f43f5e', strokeWidth: 1.5, strokeDasharray: '6 6' }}
+                        contentStyle={{
+                          background: 'rgba(10, 10, 11, 0.8)',
+                          backdropFilter: 'blur(16px)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '1.25rem',
+                          padding: '12px 16px',
+                          color: '#fff'
+                        }}
+                        formatter={(value: any) => [`${value} aluno${value !== 1 ? 's' : ''}`, 'Saídas']}
+                        labelStyle={{ color: '#f43f5e', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="total"
+                        stroke="#f43f5e"
+                        strokeWidth={3}
+                        fill="url(#cancelledStudentsGrad)"
+                        dot={{ fill: '#f43f5e', r: 5, strokeWidth: 0 }}
+                        activeDot={{ fill: '#f43f5e', r: 8, strokeWidth: 3, stroke: '#0a0a0b' }}
                         animationDuration={2500}
                       />
                     </AreaChart>
@@ -2018,7 +2133,7 @@ export default function App() {
               {/* Student Status Cards */}
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { label: 'Matrículas', value: students.length.toString(), color: 'text-white' },
+                  { label: 'Ativos', value: students.filter(s => s.status !== 'Cancelado').length.toString(), color: 'text-white' },
                   { label: 'Em Dia', value: students.filter(s => s.status === 'Em dia').length.toString(), color: 'text-amber-500' },
                   { label: 'Atrasos', value: students.filter(s => s.status === 'Pendente').length.toString(), color: 'text-rose-500' },
                 ].map((stat) => (
@@ -2144,9 +2259,16 @@ export default function App() {
                         <Edit2 size={18} />
                       </button>
                       <button 
-                        onClick={() => handleDeleteStudent(s.id)}
+                        onClick={() => handleCancelStudent(s)}
                         className="w-10 h-10 flex items-center justify-center text-rose-500/50 bg-rose-500/5 border border-rose-500/10 rounded-xl hover:text-rose-500 hover:bg-rose-500/10 transition-all"
-                        title="Excluir Aluno"
+                        title="Cancelar Matrícula / Desistência"
+                      >
+                        <LogOut size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteStudent(s.id)}
+                        className="w-10 h-10 flex items-center justify-center text-neutral-500/50 bg-white/[0.03] border border-white/[0.05] rounded-xl hover:text-rose-500 hover:bg-rose-500/10 transition-all"
+                        title="Excluir Definitivamente"
                       >
                         <Trash2 size={18} />
                       </button>
