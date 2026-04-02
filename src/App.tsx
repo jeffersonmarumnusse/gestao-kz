@@ -41,7 +41,8 @@ import {
   Phone,
   LogOut,
   Download,
-  Archive
+  Archive,
+  Trophy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -831,6 +832,7 @@ export default function App() {
         return { 
           name, 
           value, 
+          photoUrl: student?.photoUrl || null,
           plan: student?.plan || 'N/A' 
         };
       })
@@ -2332,6 +2334,55 @@ export default function App() {
                   <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mt-1">Organize as sessões e frequências</p>
                 </div>
               </div>
+
+              {/* Game-like Top 5 Ranking */}
+              {attendanceRankingData.length > 0 && (
+                <section className="glass-card-premium p-6 rounded-[2.5rem] relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <Trophy size={16} className="text-amber-500" />
+                      <h2 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] text-glow-gold">Mestres do Treino (Mês)</h2>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                    {attendanceRankingData.slice(0, 5).map((player: any, idx) => (
+                      <div key={idx} className="flex flex-col items-center gap-3 min-w-[80px] group/player relative">
+                        <div className="relative">
+                          <div className={cn(
+                            "w-16 h-16 rounded-[1.5rem] p-0.5 transition-all duration-500 group-hover/player:scale-110",
+                            idx === 0 ? "bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 p-[2px] shadow-[0_0_20px_rgba(245,158,11,0.4)]" : "bg-white/[0.08]"
+                          )}>
+                            <div className="w-full h-full bg-[#0a0a0b] rounded-[1.4rem] overflow-hidden">
+                              {player.photoUrl ? (
+                                <img src={player.photoUrl} alt={player.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-neutral-600">
+                                  <User size={24} />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className={cn(
+                            "absolute -bottom-2 -right-1 w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black shadow-xl border-2 border-[#0a0a0b] z-20",
+                            idx === 0 ? "bg-amber-500 text-black scale-110" : 
+                            idx === 1 ? "bg-neutral-300 text-black" :
+                            idx === 2 ? "bg-amber-700/80 text-white" :
+                            "bg-neutral-800 text-neutral-400"
+                          )}>
+                            {idx + 1}º
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] font-bold text-white whitespace-nowrap mb-0.5 tracking-tight">{player.name.split(' ')[0]}</p>
+                          <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">{player.value} Aulas</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {/* Week Selector Section */}
               <section className="glass-card p-6 rounded-[2.5rem] relative overflow-hidden">
