@@ -49,6 +49,7 @@ CREATE TABLE agenda_bookings (
   modality TEXT NOT NULL,
   student_name TEXT NOT NULL,
   is_experimental BOOLEAN DEFAULT FALSE,
+  validated BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

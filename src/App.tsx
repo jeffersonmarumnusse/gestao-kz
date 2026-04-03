@@ -115,6 +115,7 @@ interface Booking {
   id: string;
   studentName: string;
   isExperimental: boolean;
+  validated: boolean;
 }
 
 interface ModalitySlot {
@@ -498,7 +499,8 @@ export default function App() {
         modSlot.bookings.push({
           id: booking.id,
           studentName: booking.student_name,
-          isExperimental: booking.is_experimental
+          isExperimental: booking.is_experimental,
+          validated: booking.validated
         });
       });
       setAgendaEvents(groupedAgenda);
@@ -806,6 +808,7 @@ export default function App() {
 
       slot.modalities.forEach(modalitySlot => {
         modalitySlot.bookings.forEach(booking => {
+          if (!booking.validated) return; // Only count validated classes for ranking
           const name = booking.studentName?.trim() || '';
           if (name) {
             counts[name] = (counts[name] || 0) + 1;
@@ -1219,13 +1222,13 @@ export default function App() {
       if (modSlot) {
         newModalities = currentSlot.modalities.map(m => 
           m.modality === selectedBookingModality 
-            ? { ...m, bookings: [...m.bookings, { id: bookingId, studentName, isExperimental: experimental }] }
+            ? { ...m, bookings: [...m.bookings, { id: bookingId, studentName, isExperimental: experimental, validated: false }] }
             : m
         );
       } else {
         newModalities = [...currentSlot.modalities, { 
           modality: selectedBookingModality, 
-          bookings: [{ id: bookingId, studentName, isExperimental: experimental }] 
+          bookings: [{ id: bookingId, studentName, isExperimental: experimental, validated: false }] 
         }];
       }
 
@@ -1260,11 +1263,54 @@ export default function App() {
           };
         }
         return m;
-      }).filter(m => m.bookings.length > 0 || m.modality === selectedBookingModality); // Mantém se tiver bookings ou for a selecionada
+      }).filter(m => m.bookings.length > 0 || m.modality === selectedBookingModality);
 
       return {
         ...prev,
         [slotKey]: { ...currentSlot, modalities: newModalities }
+      };
+    });
+  };
+
+  const handleToggleValidation = async (modality: string, bookingId: string) => {
+    const slotKey = `${selectedAgendaDate}-${selectedTimeSlot}`;
+    const currentSlot = agendaEvents[slotKey];
+    if (!currentSlot) return;
+
+    const modSlot = currentSlot.modalities.find(m => m.modality === modality);
+    if (!modSlot) return;
+
+    const booking = modSlot.bookings.find(b => b.id === bookingId);
+    if (!booking) return;
+
+    const newValidated = !booking.validated;
+
+    const { error } = await supabase
+      .from('agenda_bookings')
+      .update({ validated: newValidated })
+      .eq('id', bookingId);
+
+    if (error) {
+      console.error('Erro ao validar aula:', error);
+      alert('Erro ao validar aula.');
+      return;
+    }
+
+    setAgendaEvents(prev => {
+      const prevSlot = prev[slotKey];
+      const newModalities = prevSlot.modalities.map(m => {
+        if (m.modality === modality) {
+          return {
+            ...m,
+            bookings: m.bookings.map(b => b.id === bookingId ? { ...b, validated: newValidated } : b)
+          };
+        }
+        return m;
+      });
+
+      return {
+        ...prev,
+        [slotKey]: { ...prevSlot, modalities: newModalities }
       };
     });
   };
@@ -2483,16 +2529,26 @@ export default function App() {
                           {slot.modalities.map(m => m.bookings.map(b => (
                             <div key={b.id} className="flex items-center gap-2">
                               {b.isExperimental ? (
-                                <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                <div className={cn(
+                                  "flex items-center gap-1.5 px-2 py-1 rounded-lg border",
+                                  b.validated ? "bg-amber-500/20 border-amber-500/40" : "bg-amber-500/10 border-amber-500/20"
+                                )}>
                                   <Zap size={10} className="text-amber-500 fill-amber-500" />
                                   <span className="text-[9px] font-black text-amber-500 uppercase tracking-tight">
                                     EXP: {b.studentName}
                                   </span>
+                                  {b.validated && <Check size={10} className="text-amber-500" />}
                                 </div>
                               ) : (
-                                <span className="text-[10px] font-bold text-neutral-500 group-hover:text-neutral-300 transition-colors">
-                                  {b.studentName}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className={cn(
+                                    "text-[10px] font-bold transition-colors",
+                                    b.validated ? "text-amber-500" : "text-neutral-500 group-hover:text-neutral-300"
+                                  )}>
+                                    {b.studentName}
+                                  </span>
+                                  {b.validated && <Check size={10} className="text-amber-500" />}
+                                </div>
                               )}
                             </div>
                           )))}
@@ -3365,14 +3421,30 @@ export default function App() {
                               )}
                             </div>
                           </div>
-                          {session && (
-                            <button 
-                              onClick={() => handleRemoveBooking(m.modality, b.id)}
-                              className="w-10 h-10 flex items-center justify-center text-neutral-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          )}
+                          <div className="flex items-center gap-3 relative z-10">
+                            {session && (
+                              <button 
+                                onClick={() => handleToggleValidation(m.modality, b.id)}
+                                className={cn(
+                                  "w-10 h-10 flex items-center justify-center rounded-xl transition-all border",
+                                  b.validated 
+                                    ? "bg-amber-500 text-black border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]" 
+                                    : "bg-white/[0.05] text-neutral-500 border-white/[0.08] hover:border-amber-500/30 hover:text-amber-500"
+                                )}
+                                title={b.validated ? "Desmarcar Validação" : "Validar Aula"}
+                              >
+                                <CheckCircle2 size={18} strokeWidth={b.validated ? 3 : 2} />
+                              </button>
+                            )}
+                            {session && (
+                              <button 
+                                onClick={() => handleRemoveBooking(m.modality, b.id)}
+                                className="w-10 h-10 flex items-center justify-center text-neutral-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                       {m.bookings.length === 0 && (
