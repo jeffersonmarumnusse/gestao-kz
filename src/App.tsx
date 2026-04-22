@@ -641,7 +641,7 @@ export default function App() {
     const transData = {
       id: transactionId,
       description: newTransDesc,
-      amount: parseFloat(newTransValue),
+      amount: parseFloat(newTransValue.replace(',', '.')),
       type: newTransType,
       status: newTransStatus,
       date: newTransDate
@@ -714,10 +714,14 @@ export default function App() {
 
   const handleDeleteTransaction = async (id: number) => {
     if (window.confirm('Excluir esta transação?')) {
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      const { data, error } = await supabase.from('transactions').delete().eq('id', id).select();
       if (error) {
         console.error('Erro ao excluir transação:', error);
         alert(`Erro ao excluir transação: ${error.message}`);
+        return;
+      }
+      if (data && data.length === 0) {
+        alert("Atenção: A transação não pôde ser excluída do banco de dados (0 linhas afetadas). Verifique as políticas de segurança (RLS - Row Level Security) do Supabase para garantir que a permissão de Delete esteja ativa.");
         return;
       }
       setTransactions(transactions.filter((t: any) => t.id != id));
@@ -926,7 +930,7 @@ export default function App() {
     if (!newStudentName.trim()) return;
     
     const studentId = editingStudent ? editingStudent.id : Date.now();
-    const amount = parseFloat(newStudentValue) || 0;
+    const amount = parseFloat(newStudentValue.replace(',', '.')) || 0;
     
     const studentDataDB = {
       id: studentId,
@@ -1135,9 +1139,13 @@ export default function App() {
 
   const handleDeleteStudent = async (id: number) => {
     if (window.confirm('Deseja realmente excluir este aluno?')) {
-      const { error } = await supabase.from('students').delete().eq('id', id);
+      const { data, error } = await supabase.from('students').delete().eq('id', id).select();
       if (error) {
         console.error('Erro ao excluir aluno:', error);
+        return;
+      }
+      if (data && data.length === 0) {
+        alert("Atenção: O aluno não pôde ser excluído do banco de dados (0 linhas afetadas). Verifique as políticas de segurança (RLS - Row Level Security) do Supabase para garantir que a permissão de Delete esteja ativa.");
         return;
       }
       setStudents(students.filter(s => s.id !== id));
@@ -1245,9 +1253,13 @@ export default function App() {
   const handleRemoveBooking = async (modality: string, bookingId: string) => {
     const slotKey = `${selectedAgendaDate}-${selectedTimeSlot}`;
     
-    const { error } = await supabase.from('agenda_bookings').delete().eq('id', bookingId);
+    const { data, error } = await supabase.from('agenda_bookings').delete().eq('id', bookingId).select();
     if (error) {
       console.error('Erro ao remover agendamento:', error);
+      return;
+    }
+    if (data && data.length === 0) {
+      alert("Atenção: O agendamento não pôde ser removido do banco de dados (0 linhas afetadas). Verifique as políticas de segurança (RLS - Row Level Security) do Supabase para garantir que a permissão de Delete esteja ativa.");
       return;
     }
 
