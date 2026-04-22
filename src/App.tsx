@@ -547,27 +547,16 @@ export default function App() {
   const filteredExperimental = experimentalStudents.filter((s: any) => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const { totalInCompleted, totalInPending, totalOutCompleted, totalOutPending, totalProfit } = useMemo(() => {
-    const currentMonthPrefix = getTodayDateString().substring(0, 7); // e.g., 'YYYY-MM'
-    
     const totals = transactions.reduce((acc: any, t: any) => {
       const amount = Number(t.amount) || 0;
-      
-      // Para o Saldo (Lucro Total), somamos TUDO (All Time)
-      if (t.type === 'in') {
-        if (t.status === 'completed') acc.allTimeInCompleted += amount;
-      } else if (t.type === 'out') {
-        if (t.status === 'completed') acc.allTimeOutCompleted += amount;
-      }
 
-      // Para as métricas de Receita e Despesa, filtramos apenas o MÊS ATUAL
-      if (t.date && t.date.startsWith(currentMonthPrefix)) {
-        if (t.type === 'in') {
-          if (t.status === 'completed') acc.inCompleted += amount;
-          else acc.inPending += amount;
-        } else if (t.type === 'out') {
-          if (t.status === 'completed') acc.outCompleted += amount;
-          else acc.outPending += amount;
-        }
+      // Todos os cards e o Saldo Real usam dados all-time
+      if (t.type === 'in') {
+        if (t.status === 'completed') acc.inCompleted += amount;
+        else acc.inPending += amount;
+      } else if (t.type === 'out') {
+        if (t.status === 'completed') acc.outCompleted += amount;
+        else acc.outPending += amount;
       }
       return acc;
     }, { 
@@ -575,8 +564,6 @@ export default function App() {
       inPending: 0, 
       outCompleted: 0, 
       outPending: 0,
-      allTimeInCompleted: 0,
-      allTimeOutCompleted: 0
     });
 
     return {
@@ -584,7 +571,7 @@ export default function App() {
       totalInPending: totals.inPending,
       totalOutCompleted: totals.outCompleted,
       totalOutPending: totals.outPending,
-      totalProfit: totals.allTimeInCompleted - totals.allTimeOutCompleted
+      totalProfit: totals.inCompleted - totals.outCompleted
     };
   }, [transactions]);
 
