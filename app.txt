@@ -378,7 +378,6 @@ export default function App() {
       const amount = Number(t.amount) || 0;
       if (t.type === 'in') {
         if (t.status === 'completed') acc.inCompleted += amount;
-        else acc.inPending += amount;
       } else {
         if (t.status === 'completed') acc.outCompleted += amount;
         else acc.outPending += amount;
@@ -386,14 +385,18 @@ export default function App() {
       return acc;
     }, { inCompleted: 0, inPending: 0, outCompleted: 0, outPending: 0 });
 
+    const pendingStudentsSum = students
+      .filter((s: any) => s.status === 'Pendente')
+      .reduce((sum: number, s: any) => sum + (Number(s.value) || 0), 0);
+
     return {
       totalInCompleted: totals.inCompleted,
-      totalInPending: totals.inPending,
+      totalInPending: pendingStudentsSum,
       totalOutCompleted: totals.outCompleted,
       totalOutPending: totals.outPending,
       totalProfit: totals.inCompleted - totals.outCompleted
     };
-  }, [transactions]);
+  }, [transactions, students]);
 
   const filteredTransactions = transactions.filter((t: any) => {
     if (financeFilter === 'receitas') return t.type === 'in';

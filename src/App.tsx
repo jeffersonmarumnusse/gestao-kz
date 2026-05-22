@@ -553,7 +553,6 @@ export default function App() {
       // Todos os cards e o Saldo Real usam dados all-time
       if (t.type === 'in') {
         if (t.status === 'completed') acc.inCompleted += amount;
-        else acc.inPending += amount;
       } else if (t.type === 'out') {
         if (t.status === 'completed') acc.outCompleted += amount;
         else acc.outPending += amount;
@@ -566,14 +565,18 @@ export default function App() {
       outPending: 0,
     });
 
+    const pendingStudentsSum = students
+      .filter((s: any) => s.status === 'Pendente')
+      .reduce((sum: number, s: any) => sum + (Number(s.value) || 0), 0);
+
     return {
       totalInCompleted: totals.inCompleted,
-      totalInPending: totals.inPending,
+      totalInPending: pendingStudentsSum,
       totalOutCompleted: totals.outCompleted,
       totalOutPending: totals.outPending,
       totalProfit: totals.inCompleted - totals.outCompleted
     };
-  }, [transactions]);
+  }, [transactions, students]);
 
   const filteredTransactions = transactions.filter((t: any) => {
     if (financeFilter === 'receitas') return t.type === 'in';
@@ -595,10 +598,11 @@ export default function App() {
       return Number.isNaN(d.getTime()) ? null : d;
     };
 
-    // Group by YYYY-MM, summing receitas/despesas (independente do status)
+    // Agrupar por YYYY-MM, somando apenas transações 'completed' (igual aos cards)
     const byMonth = new Map<string, { year: number; month0: number; receitas: number; despesas: number }>();
 
     for (const t of transactions) {
+      if (t?.status !== 'completed') continue; // só completed, igual aos cards
       const d = parseDateSafe(t?.date);
       if (!d) continue;
       const year = d.getFullYear();
@@ -614,18 +618,39 @@ export default function App() {
       byMonth.set(key, current);
     }
 
-    const rows = Array.from(byMonth.values())
-      .sort((a, b) => (a.year - b.year) || (a.month0 - b.month0))
-      .map((m) => ({
-        month: monthLabel(m.year, m.month0),
-        receitas: Math.round((m.receitas + Number.EPSILON) * 100) / 100,
-        despesas: Math.round((m.despesas + Number.EPSILON) * 100) / 100,
-        lucro: Math.round(((m.receitas - m.despesas) + Number.EPSILON) * 100) / 100,
-      }));
+    const sorted = Array.from(byMonth.values())
+      .sort((a, b) => (a.year - b.year) || (a.month0 - b.month0));
 
-    // Keep last 6 months with data
-    return rows.slice(-6);
-  }, [transactions]);
+    // Construir valores acumulados para que o último ponto bata com o total dos cards
+    let accReceitas = 0;
+    let accDespesas = 0;
+    const rows = sorted.map((m) => {
+      accReceitas += m.receitas;
+      accDespesas += m.despesas;
+      return {
+        month: monthLabel(m.year, m.month0),
+        receitas: Math.round((accReceitas + Number.EPSILON) * 100) / 100,
+        despesas: Math.round((accDespesas + Number.EPSILON) * 100) / 100,
+        lucro: Math.round(((accReceitas - accDespesas) + Number.EPSILON) * 100) / 100,
+      };
+    });
+
+    // Manter últimos 6 meses com dados
+    const sliced = rows.slice(-6);
+
+    // Forçar o último ponto a usar EXATAMENTE os valores dos cards (totalInCompleted / totalOutCompleted)
+    if (sliced.length > 0) {
+      const last = sliced[sliced.length - 1];
+      sliced[sliced.length - 1] = {
+        ...last,
+        receitas: totalInCompleted,
+        despesas: totalOutCompleted,
+        lucro: totalInCompleted - totalOutCompleted,
+      };
+    }
+
+    return sliced;
+  }, [transactions, totalInCompleted, totalOutCompleted]);
 
   const expensesByItem = useMemo(() => {
     const map: Record<string, number> = {};
@@ -1139,6 +1164,11 @@ export default function App() {
       }
       
       setStudents(prev => prev.map(s => s.id === student.id ? { ...s, status: 'Cancelado', cancelledAt: today } : s));
+
+      // Deleta transações pendentes deste aluno no Supabase e no estado local
+      await supabase.from('transactions').delete().eq('student_id', student.id).eq('status', 'pending');
+      setTransactions(prev => prev.filter((t: any) => !(t.studentId == student.id && t.status === 'pending')));
+
       alert('Matrícula cancelada com sucesso.');
     }
   };
@@ -1155,7 +1185,10 @@ export default function App() {
         return;
       }
       setStudents(students.filter(s => s.id !== id));
-      // Transações serão mantidas ou deletadas dependendo da FK (no schema coloquei SET NULL)
+      
+      // Deleta transações pendentes do aluno excluído no Supabase e no estado local
+      await supabase.from('transactions').delete().eq('student_id', id).eq('status', 'pending');
+      setTransactions(prev => prev.filter((t: any) => !(t.studentId == id && t.status === 'pending')));
     }
   };
 
@@ -2686,6 +2719,7 @@ export default function App() {
                         }}
                         itemStyle={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em' }}
                         labelStyle={{ color: '#f59e0b', fontWeight: '900', marginBottom: '8px', fontSize: '10px' }}
+                        formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, '']}
                       />
                       <Area 
                         type="monotone" 
