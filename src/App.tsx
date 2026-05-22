@@ -183,42 +183,53 @@ const StatCard = ({ title, value, trend, isCurrency = false, type = 'success' }:
   trend?: string,
   isCurrency?: boolean,
   type?: 'success' | 'danger' | 'info'
-}) => (
-  <div className="glass-card p-6 rounded-[2rem] flex-1 relative overflow-hidden group hover:border-amber-500/30 transition-all duration-500">
-    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-[40px] rounded-full -mr-12 -mt-12 group-hover:bg-amber-500/10 transition-all duration-700" />
-    <div className="flex items-center gap-3 mb-4">
-      <div className={cn(
-        "w-10 h-10 rounded-2xl flex items-center justify-center backdrop-blur-md border",
-        type === 'success' ? "bg-amber-500/10 border-amber-500/20 text-amber-500" : 
-        type === 'danger' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" :
-        "bg-blue-500/10 border-blue-500/20 text-blue-400"
-      )}>
-        {type === 'success' ? <TrendingUp size={18} className="text-glow-gold" /> : 
-         type === 'danger' ? <TrendingUp size={18} className="rotate-180" /> :
-         <DollarSign size={18} />}
-      </div>
-      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.15em]">{title}</span>
-    </div>
-    <h3 className={cn(
-      "text-3xl font-bold tracking-tight mb-1 text-white group-hover:text-amber-50 transition-colors",
-      type === 'info' && (Number(value) < 0 && "text-rose-500")
-    )}>
-      {isCurrency ? `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : value}
-    </h3>
-    {trend && (
-      <div className="flex items-center gap-1.5">
-        <span className={cn(
-          "text-[11px] font-semibold",
-          type === 'success' ? "text-amber-500/80" : 
-          type === 'danger' ? "text-rose-500/80" :
-          (Number(value) >= 0 ? "text-blue-400/80" : "text-rose-400/80")
+}) => {
+  const numValue = Number(value);
+  const isNegative = isCurrency && !Number.isNaN(numValue) && numValue < 0;
+  
+  return (
+    <div className="glass-card p-6 rounded-[2rem] flex-1 relative overflow-hidden group hover:border-amber-500/30 transition-all duration-500">
+      <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-[40px] rounded-full -mr-12 -mt-12 group-hover:bg-amber-500/10 transition-all duration-700" />
+      <div className="flex items-center gap-3 mb-4">
+        <div className={cn(
+          "w-10 h-10 rounded-2xl flex items-center justify-center backdrop-blur-md border",
+          type === 'success' ? "bg-amber-500/10 border-amber-500/20 text-amber-500" : 
+          type === 'danger' ? "bg-rose-500/10 border-rose-500/20 text-rose-500" :
+          "bg-blue-500/10 border-blue-500/20 text-blue-400"
         )}>
-          {trend}
-        </span>
+          {type === 'success' ? <TrendingUp size={18} className="text-glow-gold" /> : 
+           type === 'danger' ? <TrendingUp size={18} className="rotate-180" /> :
+           <DollarSign size={18} />}
+        </div>
+        <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.15em]">{title}</span>
       </div>
-    )}
-  </div>
-);
+      <h3 className={cn(
+        "text-3xl font-bold tracking-tight mb-1 transition-colors",
+        type === 'success' ? "text-amber-500 text-glow-gold group-hover:text-amber-400" : 
+        type === 'danger' ? "text-rose-500 group-hover:text-rose-400" :
+        "text-white group-hover:text-amber-50"
+      )}>
+        {isCurrency 
+          ? (isNegative 
+              ? `- R$ ${Math.abs(numValue).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` 
+              : `R$ ${numValue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`)
+          : value}
+      </h3>
+      {trend && (
+        <div className="flex items-center gap-1.5">
+          <span className={cn(
+            "text-[11px] font-semibold",
+            type === 'success' ? "text-amber-500/80" : 
+            type === 'danger' ? "text-rose-500/80" :
+            (Number(value) >= 0 ? "text-blue-400/80" : "text-rose-400/80")
+          )}>
+            {trend}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const NavItem = ({ id, icon: Icon, label, active, onClick }: { id: string, icon: any, label: string, active: boolean, onClick: () => void }) => (
   <button
@@ -816,12 +827,13 @@ export default function App() {
 
   // Dynamic Distribution Data (Total students per plan)
   const distributionData = useMemo(() => {
-    const totalStudents = students.length;
+    const activeStudents = students.filter((s: any) => s.status !== 'Cancelado');
+    const totalStudents = activeStudents.length;
     
     return PLAN_OPTIONS
       .filter(plan => plan !== 'Ritmos')
       .map(plan => {
-        const count = students.filter((s: any) => s.plan === plan).length;
+        const count = activeStudents.filter((s: any) => s.plan === plan).length;
         return {
           name: plan,
           value: count,
@@ -1731,7 +1743,7 @@ export default function App() {
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest bg-white/[0.03] px-3 py-1.5 rounded-full border border-white/[0.05]">
-                            Total: <span className="text-amber-500">{students.length}</span> Alunos
+                            Total: <span className="text-amber-500">{students.filter((s: any) => s.status !== 'Cancelado').length}</span> Alunos
                           </span>
                         </div>
                       )}
@@ -1875,7 +1887,7 @@ export default function App() {
                   value={totalProfit} 
                   trend={totalProfit >= 0 ? "Saldo Positivo" : "Saldo Negativo"} 
                   isCurrency 
-                  type="info" 
+                  type={totalProfit >= 0 ? "success" : "danger"} 
                 />
               </section>
 
