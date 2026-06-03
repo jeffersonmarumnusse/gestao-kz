@@ -1150,15 +1150,52 @@ export default function App() {
     }
     setStudents(students.map(s => s.id == student.id ? { ...s, status: newStatus } : s));
     
-    // Atualiza Transação Vinculada
-    const { error: transError } = await supabase.from('transactions').update({ status: newTransStatus }).eq('student_id', student.id);
-    if (transError) {
-      console.error('Erro ao atualizar transação vinculada:', transError);
-    }
+    // Verifica se já existe alguma transação de receita para este aluno
+    const hasTrans = transactions.some((t: any) => t.studentId == student.id && t.type === 'in');
     
-    setTransactions(transactions.map((t: any) => 
-      t.studentId == student.id ? { ...t, status: newTransStatus } : t
-    ));
+    if (hasTrans) {
+      // Atualiza Transação Vinculada
+      const { error: transError } = await supabase
+        .from('transactions')
+        .update({ status: newTransStatus })
+        .eq('student_id', student.id)
+        .eq('type', 'in');
+        
+      if (transError) {
+        console.error('Erro ao atualizar transação vinculada:', transError);
+      }
+      
+      setTransactions(transactions.map((t: any) => 
+        (t.studentId == student.id && t.type === 'in') ? { ...t, status: newTransStatus } : t
+      ));
+    } else {
+      // Cria transação automática caso não exista
+      const newTrans = {
+        id: Date.now(),
+        student_id: student.id,
+        description: `Mensalidade ${student.name}`,
+        amount: student.value || 0,
+        type: 'in',
+        status: newTransStatus,
+        date: getTodayDateString()
+      };
+      
+      const { error: transError } = await supabase.from('transactions').insert([newTrans]);
+      if (transError) {
+        console.error('Erro ao criar transação para o aluno:', transError);
+      } else {
+        const newTransUI = {
+          id: newTrans.id,
+          studentId: student.id,
+          description: newTrans.description,
+          amount: newTrans.amount,
+          type: newTrans.type,
+          status: newTrans.status,
+          date: newTrans.date
+        };
+        setTransactions(prev => [newTransUI, ...prev]);
+      }
+    }
   };
 
   const handleCancelStudent = async (student: any) => {
