@@ -1163,6 +1163,7 @@ export default function App() {
         
       if (transError) {
         console.error('Erro ao atualizar transação vinculada:', transError);
+        alert(`Erro ao atualizar transação no financeiro: ${transError.message}`);
       }
       
       setTransactions(transactions.map((t: any) => 
@@ -1183,6 +1184,7 @@ export default function App() {
       const { error: transError } = await supabase.from('transactions').insert([newTrans]);
       if (transError) {
         console.error('Erro ao criar transação para o aluno:', transError);
+        alert(`Erro ao lançar transação no financeiro: ${transError.message}`);
       } else {
         const newTransUI = {
           id: newTrans.id,
