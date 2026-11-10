@@ -89,6 +89,11 @@ import { twMerge } from 'tailwind-merge';
     return new Date(year, month - 1, day);
   }
 
+  function formatCurrency(val: number | string | undefined | null) {
+    const num = Number(val) || 0;
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
 // --- Constants ---
 const MODALITIES = [
   'FUNCIONAL',
@@ -211,8 +216,8 @@ const StatCard = ({ title, value, trend, isCurrency = false, type = 'success' }:
       )}>
         {isCurrency 
           ? (isNegative 
-              ? `- R$ ${Math.abs(numValue).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` 
-              : `R$ ${numValue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`)
+              ? `- R$ ${formatCurrency(Math.abs(numValue))}` 
+              : `R$ ${formatCurrency(numValue)}`)
           : value}
       </h3>
       {trend && (
@@ -564,6 +569,7 @@ export default function App() {
       // Todos os cards e o Saldo Real usam dados all-time
       if (t.type === 'in') {
         if (t.status === 'completed') acc.inCompleted += amount;
+        else acc.inPending += amount;
       } else if (t.type === 'out') {
         if (t.status === 'completed') acc.outCompleted += amount;
         else acc.outPending += amount;
@@ -576,13 +582,19 @@ export default function App() {
       outPending: 0,
     });
 
-    const pendingStudentsSum = students
-      .filter((s: any) => s.status === 'Pendente')
+    // Se houver algum aluno com status 'Pendente' que ainda não tenha uma transação pendente em 'transactions'
+    const pendingStudentsWithoutTransSum = students
+      .filter((s: any) => 
+        s.status === 'Pendente' && 
+        !transactions.some((t: any) => (t.studentId == s.id || t.student_id == s.id) && t.type === 'in' && t.status === 'pending')
+      )
       .reduce((sum: number, s: any) => sum + (Number(s.value) || 0), 0);
+
+    const calculatedInPending = totals.inPending + pendingStudentsWithoutTransSum;
 
     return {
       totalInCompleted: totals.inCompleted,
-      totalInPending: pendingStudentsSum,
+      totalInPending: calculatedInPending,
       totalOutCompleted: totals.outCompleted,
       totalOutPending: totals.outPending,
       totalProfit: totals.inCompleted - totals.outCompleted
@@ -695,6 +707,13 @@ export default function App() {
         console.error('Erro ao atualizar transação:', error);
         alert(`Erro ao atualizar transação: ${error.message || 'Erro desconhecido'}`);
         return;
+      }
+      if (editingTransaction.studentId) {
+        const studentStatus = newTransStatus === 'completed' ? 'Em dia' : 'Pendente';
+        await supabase.from('students').update({ status: studentStatus }).eq('id', editingTransaction.studentId);
+        setStudents(prevStudents => prevStudents.map(s => 
+          s.id == editingTransaction.studentId ? { ...s, status: studentStatus } : s
+        ));
       }
       setTransactions(prevTransactions => prevTransactions.map((t: any) => t.id == transactionId ? { ...t, ...transData } : t));
     } else {
@@ -1016,16 +1035,31 @@ export default function App() {
 
       setStudents(prevStudents => prevStudents.map(s => s.id == studentId ? { ...s, ...studentDataUI } : s));
 
-      // Atualiza transação se existir
-      const transData = {
-        description: `Mensalidade ${newStudentName}`,
-        amount: amount,
-        status: selectedPayment === 'Em dia' ? 'completed' : 'pending'
-      };
-      await supabase.from('transactions').update(transData).eq('student_id', studentId);
-      setTransactions(prevTransactions => prevTransactions.map((t: any) => 
-        t.studentId == studentId ? { ...t, ...transData } : t
-      ));
+      // Atualiza transação se existir ou cria uma nova
+      const existingTrans = transactions.find((t: any) => (t.studentId == studentId || t.student_id == studentId) && t.type === 'in');
+      if (existingTrans) {
+        const transData = {
+          description: `Mensalidade ${newStudentName}`,
+          amount: amount,
+          status: selectedPayment === 'Em dia' ? 'completed' : 'pending'
+        };
+        await supabase.from('transactions').update(transData).eq('id', existingTrans.id);
+        setTransactions(prevTransactions => prevTransactions.map((t: any) => 
+          t.id == existingTrans.id ? { ...t, ...transData } : t
+        ));
+      } else {
+        const newTrans = {
+          id: Date.now() + 1,
+          student_id: studentId,
+          description: `Mensalidade ${newStudentName}`,
+          amount: amount,
+          type: 'in',
+          status: selectedPayment === 'Em dia' ? 'completed' : 'pending',
+          date: getTodayDateString()
+        };
+        await supabase.from('transactions').insert([newTrans]);
+        setTransactions(prevTransactions => [{ ...newTrans, studentId }, ...prevTransactions]);
+      }
     } else {
       const { error } = await supabase.from('students').insert([studentDataDB]);
       if (error) {
@@ -1910,14 +1944,14 @@ export default function App() {
                 <StatCard 
                   title="Receita" 
                   value={totalInCompleted} 
-                  trend={`${totalInPending > 0 ? `+ R$ ${totalInPending.toLocaleString('pt-BR')} previsto` : ''}`} 
+                  trend={`${totalInPending > 0 ? `+ R$ ${formatCurrency(totalInPending)} previsto` : ''}`} 
                   isCurrency 
                   type="success" 
                 />
                 <StatCard 
                   title="Despesa" 
                   value={totalOutCompleted} 
-                  trend={`${totalOutPending > 0 ? `+ R$ ${totalOutPending.toLocaleString('pt-BR')} previsto` : ''}`} 
+                  trend={`${totalOutPending > 0 ? `+ R$ ${formatCurrency(totalOutPending)} previsto` : ''}`} 
                   isCurrency 
                   type="danger" 
                 />
@@ -2387,7 +2421,7 @@ export default function App() {
                             {s.plan}
                           </span>
                           <span className="text-[10px] text-neutral-500 font-bold tracking-tight">
-                            R$ {s.value?.toLocaleString('pt-BR') || '0,00'}
+                            R$ {formatCurrency(s.value)}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-3">
@@ -2688,11 +2722,11 @@ export default function App() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="glass-card p-5 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group">
                   <div className="flex flex-col items-center relative z-10">
-                    <span className="text-[13px] font-black text-amber-500 text-glow-gold mb-1">R$ {totalInCompleted.toLocaleString('pt-BR')}</span>
+                    <span className="text-[13px] font-black text-amber-500 text-glow-gold mb-1">R$ {formatCurrency(totalInCompleted)}</span>
                     <span className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest">Liquidez</span>
                   </div>
                   <div className="mt-3 pt-3 border-t border-white/5 w-full flex flex-col items-center opacity-40 relative z-10">
-                    <span className="text-[10px] font-bold text-amber-500/80">R$ {totalInPending.toLocaleString('pt-BR')}</span>
+                    <span className="text-[10px] font-bold text-amber-500/80">R$ {formatCurrency(totalInPending)}</span>
                     <span className="text-[7px] font-bold text-neutral-600 uppercase tracking-tighter">Previsto</span>
                   </div>
                   <p className="absolute bottom-1 right-2 text-[6px] font-black text-neutral-700 uppercase tracking-[0.3em]">Receitas</p>
@@ -2700,11 +2734,11 @@ export default function App() {
 
                 <div className="glass-card p-5 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group">
                   <div className="flex flex-col items-center relative z-10">
-                    <span className="text-[13px] font-black text-rose-500 mb-1">R$ {totalOutCompleted.toLocaleString('pt-BR')}</span>
+                    <span className="text-[13px] font-black text-rose-500 mb-1">R$ {formatCurrency(totalOutCompleted)}</span>
                     <span className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest">Realizado</span>
                   </div>
                   <div className="mt-3 pt-3 border-t border-white/5 w-full flex flex-col items-center opacity-40 relative z-10">
-                    <span className="text-[10px] font-bold text-rose-400/80">R$ {totalOutPending.toLocaleString('pt-BR')}</span>
+                    <span className="text-[10px] font-bold text-rose-400/80">R$ {formatCurrency(totalOutPending)}</span>
                     <span className="text-[7px] font-bold text-neutral-600 uppercase tracking-tighter">Pendente</span>
                   </div>
                   <p className="absolute bottom-1 right-2 text-[6px] font-black text-neutral-700 uppercase tracking-[0.3em]">Despesas</p>
@@ -2713,12 +2747,12 @@ export default function App() {
                 <div className="glass-card p-5 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden group border-amber-500/10">
                   <div className="absolute inset-0 bg-amber-500/[0.02]" />
                   <p className={cn("text-sm font-black mb-1 relative z-10", totalProfit >= 0 ? "text-amber-500 text-glow-gold" : "text-rose-500")}>
-                    R$ {totalProfit.toLocaleString('pt-BR')}
+                    R$ {formatCurrency(totalProfit)}
                   </p>
                   <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest relative z-10">Saldo Real</p>
                   <div className="mt-4 text-[7px] font-bold text-neutral-500 uppercase text-center leading-tight relative z-10">
                     Projeção:<br/>
-                    <span className="text-white/60">R$ {(totalProfit + totalInPending - totalOutPending).toLocaleString('pt-BR')}</span>
+                    <span className="text-white/60">R$ {formatCurrency(totalProfit + totalInPending - totalOutPending)}</span>
                   </div>
                 </div>
               </div>
@@ -2810,7 +2844,7 @@ export default function App() {
                     <div className="flex items-center gap-2 bg-rose-500/10 px-4 py-2 rounded-2xl border border-rose-500/20">
                       <ArrowDownRight size={14} className="text-rose-500" />
                       <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">
-                        R$ {expensesByItem.reduce((s, i) => s + i.value, 0).toLocaleString('pt-BR')}
+                        R$ {formatCurrency(expensesByItem.reduce((s, i) => s + i.value, 0))}
                       </span>
                     </div>
                   </div>
@@ -2840,7 +2874,7 @@ export default function App() {
                             borderRadius: '1.25rem',
                             padding: '12px 16px'
                           }}
-                          formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR')}`, 'Total']}
+                          formatter={(value: any) => [`R$ ${formatCurrency(value)}`, 'Total']}
                           labelStyle={{ color: '#f43f5e', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}
                           itemStyle={{ color: '#fff', fontSize: 13, fontWeight: 700 }}
                         />
@@ -2930,7 +2964,7 @@ export default function App() {
                         "text-sm font-black tracking-tight",
                         t.type === 'in' ? "text-amber-500 text-glow-gold" : "text-rose-500"
                       )}>
-                        {t.type === 'in' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
+                        {t.type === 'in' ? '+' : '-'} R$ {formatCurrency(t.amount)}
                       </span>
                       
                       <div className="flex items-center gap-2">
